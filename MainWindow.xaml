@@ -6,7 +6,21 @@
         xmlns:local="clr-namespace:TherapyTime"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        
+    <Grid Name="ButtonGridContainer">
+        <!-- UniformGrid automatically sizes items equally -->
+            <!-- Header for Day Names -->
+        <UniformGrid Columns="7" Height="30">
+            <TextBlock Text="Sun" HorizontalAlignment="Center"/>
+            <TextBlock Text="Mon" HorizontalAlignment="Center"/>
+            <TextBlock Text="Tue" HorizontalAlignment="Center"/>
+            <TextBlock Text="Wed" HorizontalAlignment="Center"/>
+            <TextBlock Text="Thu" HorizontalAlignment="Center"/>
+            <TextBlock Text="Fri" HorizontalAlignment="Center"/>
+            <TextBlock Text="Sat" HorizontalAlignment="Center"/>
+        </UniformGrid>
 
+        <!-- The Calendar Grid -->
+        <UniformGrid x:Name="panelGrid" Columns="7" />
     </Grid>
 </Window>

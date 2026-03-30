@@ -29,6 +29,7 @@ public partial class MainWindow : Window
         {
             _startDate = welcomeWindow.getStartDate();
             MessageBox.Show($"You picked: {_startDate}");
+            CreateButtonGrid();
         } 
         else
         {
@@ -39,40 +40,99 @@ public partial class MainWindow : Window
 
     private void CreateButtonGrid()
     {
-        panelGrid.Children.Clear(); // Clear existing buttons
+        panelGrid.Children.Clear();
 
-        //DateTime to
+        int totalDays = dayMax;       // 30
+        DateTime startDate = _startDate;
 
-        _buttonGrid = new Button[size, size];
-        for (int i = 0; i < size; i++)
+        // Calculate what day of the week the start date is (0=Sunday)
+        int startDayOfWeek = (int)startDate.DayOfWeek;
+
+        int rows = (int)Math.Ceiling((startDayOfWeek + totalDays) / 7.0);
+        panelGrid.Rows = rows;
+        panelGrid.Columns = 7;
+
+        int dayCounter = 1;
+
+        // Loop through each cell in the grid
+        for (int cell = 0; cell < rows * 7; cell++)
         {
-            for (int j = 0; j < size; j++)
+            Button dayButton;
+
+            if (cell < startDayOfWeek || dayCounter > totalDays)
             {
-                Button newButton = new Button
+                // Empty space before the start day or after the last day
+                dayButton = new Button
                 {
-                    Content = $"{i},{j}", // WPF uses Content, not Text
-                    Tag = new System.Windows.Point(i, j),
-                    Width = 30,
-                    Height = 30,
-                    Margin = new Thickness(2)
+                    IsEnabled = false,
+                    Background = new SolidColorBrush(System.Windows.Media.Colors.Transparent),
+                    BorderThickness = new Thickness(0)
+                };
+            }
+            else
+            {
+                DateTime currentDay = startDate.AddDays(dayCounter - 1);
+
+                dayButton = new Button
+                {
+                    Content = currentDay.Day.ToString(),
+                    Tag = currentDay,
+                    Width = 40,
+                    Height = 40,
+                    Margin = new Thickness(3),
+                    Background = new SolidColorBrush(System.Windows.Media.Colors.White),
+                    BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(200, 200, 200)),
+                    BorderThickness = new Thickness(1),
+                    FontWeight = FontWeights.SemiBold,
+                    HorizontalContentAlignment = HorizontalAlignment.Center,
+                    VerticalContentAlignment = VerticalAlignment.Center,
+                    Cursor = Cursors.Hand
                 };
 
-                newButton.Click += Button_Click;
+                // Highlight today
+                if (currentDay.Date == DateTime.Today)
+                {
+                    dayButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(180, 220, 255));
+                }
 
-                // Add to the UniformGrid's children
-                panelGrid.Children.Add(newButton);
-                _buttonGrid[i, j] = newButton;
+                // Hover effect
+                dayButton.MouseEnter += (s, e) =>
+                {
+                    dayButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 240, 255));
+                };
+                dayButton.MouseLeave += (s, e) =>
+                {
+                    if (currentDay.Date == DateTime.Today)
+                        dayButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(180, 220, 255));
+                    else
+                        dayButton.Background = new SolidColorBrush(System.Windows.Media.Colors.White);
+                };
+
+                dayButton.Click += Button_Click;
+
+                dayCounter++;
             }
+
+            panelGrid.Children.Add(dayButton);
         }
     }
 
-    private void Button_Click(object sender, EventArgs e)
+    private void Button_Click(object sender, RoutedEventArgs e)
     {
-        //verify not null and that it is a Button:
-        if (sender is Button clickedButton && clickedButton.Tag is System.Windows.Point coords)
+        if (sender is Button clickedButton && clickedButton.Tag is DateTime day)
         {
-            MessageBox.Show($"Button at Row: {coords.X}, Column: {coords.Y} clicked!");
+            MessageBox.Show($"You clicked: {day:MMMM dd, yyyy}");
         }
+    }
+
+    private void Exit_Click(object sender, RoutedEventArgs e)
+    {
+        Application.Current.Shutdown();
+    }
+
+    private void About_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show("TherapyTime v1.0", "About");
     }
 
 }

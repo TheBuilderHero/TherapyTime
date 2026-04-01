@@ -1,0 +1,35 @@
+<Window x:Class="TherapyTime.DayView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="TherapyTime" Height="600" Width="800" Background="#F5F7FA">
+
+    <Grid Margin="15">
+        <DataGrid x:Name="userDataGrid" 
+                  AutoGenerateColumns="False" 
+                  CanUserAddRows="False"
+                  SelectionMode="Single"
+                  GridLinesVisibility="Horizontal"
+                  AlternatingRowBackground="#F9F9F9"
+                  RowHeaderWidth="0">
+            <DataGrid.Columns>
+                <!-- Standard Text Columns -->
+                <DataGridTextColumn Header="Student Name" Binding="{Binding Name}" Width="*" />
+                <DataGridTextColumn Header="Required Mins" Binding="{Binding MonthlyRequiredMinutes}" Width="120" />
+                
+                <!-- Specialized Dates -->
+                <DataGridTextColumn Header="Next Reevaluation" 
+                                    Binding="{Binding NextThreeYearReevaluation, StringFormat=\{0:MM/dd/yyyy\}}" 
+                                    Width="150" />
+
+                <!-- Buttons for interaction -->
+                <DataGridTemplateColumn Header="Actions" Width="100">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="Schedule" Padding="5,2"/> <!--  Click=""  -->
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>

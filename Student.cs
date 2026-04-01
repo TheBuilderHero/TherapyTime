@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 
-namespace TherapyTime.Models;
+namespace TherapyTime;
 
 /// <summary>
 /// Manages a list of students and JSON persistence
@@ -47,6 +47,7 @@ public static class StudentManager
         // Therapy sessions
         public List<TherapySession> PastSessions { get; set; } = new List<TherapySession>();
         public List<TherapySession> FutureSessions { get; set; } = new List<TherapySession>();
+        public List<TherapySession> Sessions { get; set; } = new List<TherapySession>();
 
         // Annual reviews
         public List<DateTime> PastAnnualReviews { get; set; } = new List<DateTime>();
@@ -81,24 +82,18 @@ public static class StudentManager
         public bool HasSessionOn(DateTime date)
         {
             return PastSessions.Any(s => s.Date.Date == date.Date)
-                || FutureSessions.Any(s => s.Date.Date == date.Date);
+                || FutureSessions.Any(s => s.Date.Date == date.Date)
+                || Sessions.Any(s => s.Date.Date == date.Date);
         }
 
         /// <summary>
         /// Add a therapy session
         /// </summary>
-        public void AddSession(DateTime date, int minutes = 60, bool isFuture = false, SessionCode status = SessionCode.T, string? notes = null)
+        public void scheduleSession(DateTime date, int minutes = 60)
         {
-            // Only allow notes if session code is NM or R
-            if (status != SessionCode.NM && status != SessionCode.R)
-                notes = null;
+            var session = new TherapySession(date, minutes);
 
-            var session = new TherapySession(date, minutes, status, notes);
-
-            if (isFuture)
-                FutureSessions.Add(session);
-            else
-                PastSessions.Add(session);
+            Sessions.Add(session);
         }
 
         /// <summary>

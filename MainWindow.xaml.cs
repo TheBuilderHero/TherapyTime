@@ -77,8 +77,8 @@ public partial class MainWindow : Window
                 {
                     Content = currentDay.Day.ToString(),
                     Tag = currentDay,
-                    Width = 40,
-                    Height = 40,
+                    Width = 70,
+                    Height = 70,
                     Margin = new Thickness(3),
                     Background = new SolidColorBrush(System.Windows.Media.Colors.White),
                     BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(200, 200, 200)),
@@ -122,6 +122,11 @@ public partial class MainWindow : Window
         if (sender is Button clickedButton && clickedButton.Tag is DateTime day)
         {
             MessageBox.Show($"You clicked: {day:MMMM dd, yyyy}");
+            DayView sessionView = new DayView();
+            if(sessionView.ShowDialog() == true)
+            {
+                
+            }
         }
     }
 

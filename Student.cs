@@ -1,3 +1,4 @@
+using System.Drawing.Printing;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -12,8 +13,17 @@ public static class StudentManager
     /// <summary>
     /// Load students from JSON string
     /// </summary>
-    public static List<Student> LoadFromJson(string json) =>
-        JsonSerializer.Deserialize<List<Student>>(json) ?? new List<Student>();
+    public static List<Student> LoadFromJson(string json)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<List<Student>>(json) ?? new List<Student>();
+        }
+        catch
+        {
+            return new List<Student>(); // fallback if JSON is corrupted
+        }
+    }
 
     /// <summary>
     /// Save students to JSON string
@@ -45,9 +55,11 @@ public static class StudentManager
         public int MonthlyRequiredMinutes { get; set; } = 120;
 
         // Therapy sessions
-        public List<TherapySession> PastSessions { get; set; } = new List<TherapySession>();
-        public List<TherapySession> FutureSessions { get; set; } = new List<TherapySession>();
-        public List<TherapySession> Sessions { get; set; } = new List<TherapySession>();
+        public List<Session> Sessions { get; set; } = new List<Session>();
+
+        // Total minutes received and required
+        public int TotalMinutesReceived { get; set; } = 0;
+        public int TotalMinutesRequired { get; set; } = 120;
 
         // Annual reviews
         public List<DateTime> PastAnnualReviews { get; set; } = new List<DateTime>();
@@ -70,8 +82,8 @@ public static class StudentManager
         /// </summary>
         public int TotalMinutesForMonth(int year, int month)
         {
-            return PastSessions
-                    .Concat(FutureSessions)
+            return Sessions
+                    //.Concat(FutureSessions)
                     .Where(s => s.Date.Year == year && s.Date.Month == month)
                     .Sum(s => s.Minutes);
         }
@@ -81,19 +93,24 @@ public static class StudentManager
         /// </summary>
         public bool HasSessionOn(DateTime date)
         {
-            return PastSessions.Any(s => s.Date.Date == date.Date)
-                || FutureSessions.Any(s => s.Date.Date == date.Date)
-                || Sessions.Any(s => s.Date.Date == date.Date);
+            var target = date.Date;
+            return Sessions.Any(s => s.Date.Date == target);
         }
 
         /// <summary>
         /// Add a therapy session
         /// </summary>
-        public void scheduleSession(DateTime date, int minutes = 60)
+        public void ScheduleSession(DateTime date, int minutes = 60)
         {
-            var session = new TherapySession(date, minutes);
+            //Prevent duplicates.
+            if (Sessions.Any(s => s.Date == date))
+                throw new InvalidOperationException("Session already exists for this date.");
 
-            Sessions.Add(session);
+            
+            Sessions.Add(new Session(date, minutes, SessionCode.IC));
+
+            // Keep sessions sorted by date
+            Sessions = Sessions.OrderBy(s => s.Date).ToList();
         }
 
         /// <summary>

@@ -1,4 +1,6 @@
-﻿using System.Drawing;
+﻿using System.IO;
+using Microsoft.Win32; // for OpenFileDialog / SaveFileDialog
+using System.Drawing;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -17,18 +19,45 @@ namespace TherapyTime;
 /// </summary>
 public partial class MainWindow : Window
 {
-    private Button[,] _buttonGrid = null!;
-    private int size = 10; // e.g., 10x10 grid\
-    private int dayMax = 30; // total number of days that the IEP has which is 30.
+    private int dayMax = 30; // fallback total number of days when end date is missing
     private DateTime _startDate;
+    private DateTime _endDate;
+    private string _studentFilePath;
+    private List<Student> _allStudents = new List<Student>();
     public MainWindow()
     {
         InitializeComponent();
+
+        // Load students from JSON ()
+        List<Student> allStudents;
+
+         _studentFilePath = DataHandler.GetDataFilePath("students.json");
+
+
+        if (File.Exists(_studentFilePath))
+        {
+            string json = File.ReadAllText(_studentFilePath);
+            allStudents = StudentManager.LoadFromJson(json);
+        }
+        else
+        {
+            allStudents = new List<Student>();
+        }
+
+        _allStudents = File.Exists(_studentFilePath) 
+            ? StudentManager.LoadFromJson(File.ReadAllText(_studentFilePath))
+            : new List<Student>();
+
+        // After loading students
+        PopulateDeleteStudentMenu();
+
+        
         Welcome welcomeWindow = new Welcome();
         if(welcomeWindow.ShowDialog() == true)
         {
             _startDate = welcomeWindow.getStartDate();
-            MessageBox.Show($"You picked: {_startDate}");
+            _endDate = welcomeWindow.getEndDate();
+            //MessageBox.Show($"You picked: {_startDate} to {_endDate}");
             CreateButtonGrid();
         } 
         else
@@ -42,8 +71,13 @@ public partial class MainWindow : Window
     {
         panelGrid.Children.Clear();
 
-        int totalDays = dayMax;       // 30
         DateTime startDate = _startDate;
+        int totalDays = (_endDate - startDate).Days + 1;
+        if (totalDays < 1)
+        {
+            totalDays = dayMax;
+            _endDate = startDate.AddDays(dayMax - 1);
+        }
 
         // Calculate what day of the week the start date is (0=Sunday)
         int startDayOfWeek = (int)startDate.DayOfWeek;
@@ -117,18 +151,153 @@ public partial class MainWindow : Window
         }
     }
 
-    private void Button_Click(object sender, RoutedEventArgs e)
+    private void AddSession_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button clickedButton && clickedButton.Tag is DateTime day)
+        if (_allStudents.Count == 0)
         {
-            MessageBox.Show($"You clicked: {day:MMMM dd, yyyy}");
-            DayView sessionView = new DayView();
-            if(sessionView.ShowDialog() == true)
+            MessageBox.Show("No students available to add a session.", "Info");
+            return;
+        }
+
+        // Open AddSessionWindow with all students in dropdown
+        AddSessionWindow addSessionWindow = new AddSessionWindow(_allStudents)
+        {
+            Owner = this
+        };
+
+        if (addSessionWindow.ShowDialog() == true)
+        {
+            var student = addSessionWindow.SelectedStudent!;
+            var date = addSessionWindow.SelectedDate;
+            int minutes = addSessionWindow.Minutes;
+
+            if (!student.HasSessionOn(date))
             {
-                
+                student.ScheduleSession(date, minutes);
+                SaveStudents();
+                MessageBox.Show($"Session added for {student.Name} on {date:MM/dd/yyyy} ({minutes} minutes).", "Info");
+            }
+            else
+            {
+                MessageBox.Show($"{student.Name} already has a session on {date:MM/dd/yyyy}.", "Info");
             }
         }
     }
+
+// --- New IEP ---
+    private void NewIEP_Click(object sender, RoutedEventArgs e)
+    {
+        // Confirm with user
+        if (MessageBox.Show("Start a new IEP? This will clear current data.", "Confirm", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+        {
+            _allStudents.Clear();
+            _startDate = DateTime.Today; // default start date
+            _endDate = _startDate.AddDays(dayMax - 1);
+            CreateButtonGrid(); // reset calendar
+            SaveStudents(); // save empty IEP
+            MessageBox.Show("New IEP created.", "Info");
+        }
+    }
+
+    // --- Open IEP ---
+    private void OpenIEP_Click(object sender, RoutedEventArgs e)
+    {
+        OpenFileDialog dlg = new OpenFileDialog
+        {
+            Filter = "JSON Files|*.json",
+            InitialDirectory = System.IO.Path.GetDirectoryName(_studentFilePath)
+        };
+
+        if (dlg.ShowDialog() == true)
+        {
+            try
+            {
+                string json = File.ReadAllText(dlg.FileName);
+                _allStudents = StudentManager.LoadFromJson(json);
+                MessageBox.Show($"IEP loaded with {_allStudents.Count} students.", "Info");
+
+                // Optionally ask for a start date for this IEP
+                _startDate = DateTime.Today;
+                _endDate = _startDate.AddDays(dayMax - 1);
+                CreateButtonGrid();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Failed to load IEP: " + ex.Message, "Error");
+            }
+        }
+    }
+
+    // --- New Student ---
+    private void NewStudent_Click(object sender, RoutedEventArgs e)
+    {
+        string? studentName = Microsoft.VisualBasic.Interaction.InputBox(
+            "Enter the new student's name:",
+            "New Student",
+            "");
+
+        if (!string.IsNullOrWhiteSpace(studentName))
+        {
+            Student newStudent = new Student(studentName);
+            _allStudents.Add(newStudent);
+            SaveStudents();
+            // After adding a new student
+            PopulateDeleteStudentMenu();
+            MessageBox.Show($"Student '{studentName}' added.", "Info");
+        }
+        else
+        {
+            MessageBox.Show("No name entered. Student not added.", "Info");
+        }
+    }
+
+    
+
+    private void PopulateDeleteStudentMenu()
+    {
+        DeleteStudentMenu.Items.Clear();
+
+        if (_allStudents.Count == 0)
+        {
+            MenuItem emptyItem = new MenuItem { Header = "(No students)" };
+            emptyItem.IsEnabled = false;
+            DeleteStudentMenu.Items.Add(emptyItem);
+            return;
+        }
+
+        foreach (var student in _allStudents)
+        {
+            MenuItem studentItem = new MenuItem
+            {
+                Header = student.Name,
+                Tag = student
+            };
+            studentItem.Click += DeleteStudent_Click;
+            DeleteStudentMenu.Items.Add(studentItem);
+        }
+    }
+
+    private void DeleteStudent_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem menuItem && menuItem.Tag is Student student)
+        {
+            var result = MessageBox.Show(
+                $"Are you sure you want to delete {student.Name}?",
+                "Confirm Delete",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                _allStudents.Remove(student);
+                SaveStudents();
+                PopulateDeleteStudentMenu();
+                MessageBox.Show($"{student.Name} has been deleted.", "Info");
+            }
+        }
+    }
+
+
 
     private void Exit_Click(object sender, RoutedEventArgs e)
     {
@@ -138,6 +307,44 @@ public partial class MainWindow : Window
     private void About_Click(object sender, RoutedEventArgs e)
     {
         MessageBox.Show("TherapyTime v1.0", "About");
+    }
+
+    private void SaveStudents()
+    {
+        string json = StudentManager.SaveToJson(_allStudents);
+        File.WriteAllText(_studentFilePath, json);
+    }
+
+    private void Button_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button clickedButton && clickedButton.Tag is DateTime day)
+        {
+            if (_allStudents.Count == 0)
+            {
+                MessageBox.Show("No students available. Add a student first.", "Info");
+                return;
+            }
+
+            try
+            {
+                EditDaySessionsWindow editWindow = new EditDaySessionsWindow(_allStudents, day)
+                {
+                    Owner = this
+                };
+
+                bool? result = editWindow.ShowDialog();
+
+                if (result == true)
+                {
+                    SaveStudents();
+                    MessageBox.Show($"Sessions for {day:MM/dd/yyyy} saved.", "Info");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error opening session editor: " + ex.Message, "Error");
+            }
+        }
     }
 
 }

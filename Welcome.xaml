@@ -40,6 +40,17 @@
                             Background="#F0F2F5"
                             BorderBrush="#D0D5DD"/>
 
+                <TextBlock Text="Pick End Date for IEP"
+                           FontSize="14"
+                           Foreground="#555"
+                           Margin="0,0,0,5"/>
+
+                <DatePicker x:Name="IEPEndDate"
+                            Height="35"
+                            Margin="0,0,0,20"
+                            Background="#F0F2F5"
+                            BorderBrush="#D0D5DD"/>
+
                 <!-- Button -->
                 <Button x:Name="Submit"
                         Content="Submit"

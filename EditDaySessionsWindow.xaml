@@ -1,0 +1,83 @@
+<Window x:Class="TherapyTime.EditDaySessionsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:TherapyTime"
+        Title="Edit Sessions" Height="400" Width="500"
+        WindowStartupLocation="CenterOwner">
+
+        <Window.Resources>
+            <ObjectDataProvider MethodName="GetValues" ObjectType="{x:Type sys:Enum}" x:Key="SessionCodesProvider" xmlns:sys="clr-namespace:System;assembly=mscorlib">
+                <ObjectDataProvider.MethodParameters>
+                    <x:Type TypeName="local:SessionCode"/>
+                </ObjectDataProvider.MethodParameters>
+            </ObjectDataProvider>
+            <Style x:Key="SessionComboBoxStyle" TargetType="ComboBox">
+                <Setter Property="IsEnabled" Value="True"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsCompleted}" Value="True">
+                        <Setter Property="IsEnabled" Value="False"/>
+                        <Setter Property="Opacity" Value="0.5"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Window.Resources>
+    <DockPanel Margin="10">
+
+        <DataGrid x:Name="SessionsGrid"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  DockPanel.Dock="Top"
+                  Margin="0,0,0,10"
+                  PreviewMouseLeftButtonDown="DataGrid_PreviewMouseLeftButtonDown">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Student Name" Binding="{Binding Student.Name}" IsReadOnly="True"/>
+                <DataGridComboBoxColumn Header="Minutes"
+                                        SelectedItemBinding="{Binding Minutes, Mode=TwoWay}"
+                                        ElementStyle="{StaticResource SessionComboBoxStyle}"
+                                        EditingElementStyle="{StaticResource SessionComboBoxStyle}">
+                    <DataGridComboBoxColumn.ItemsSource>
+                        <x:Array Type="sys:Int32" xmlns:sys="clr-namespace:System;assembly=mscorlib">
+                            <sys:Int32>10</sys:Int32>
+                            <sys:Int32>20</sys:Int32>
+                            <sys:Int32>30</sys:Int32>
+                            <sys:Int32>40</sys:Int32>
+                            <sys:Int32>50</sys:Int32>
+                            <sys:Int32>60</sys:Int32>
+                        </x:Array>
+                    </DataGridComboBoxColumn.ItemsSource>
+                </DataGridComboBoxColumn>
+
+                <DataGridTemplateColumn Header="Session Code" Width="150">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Code}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                    <DataGridTemplateColumn.CellEditingTemplate>
+                        <DataTemplate>
+                            <ComboBox
+                                ItemsSource="{Binding SessionCodes}"
+                                SelectedItem="{Binding Code, Mode=TwoWay}"
+                                Style="{StaticResource SessionComboBoxStyle}"
+                                Margin="0"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellEditingTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTemplateColumn Header="Action" Width="130">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="{Binding ActionButtonText}" Padding="5,2" Click="ToggleComplete_Click"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <Button Content="Save Sessions"
+                Width="120"
+                Height="30"
+                HorizontalAlignment="Right"
+                Click="Save_Click"/>
+    </DockPanel>
+</Window>

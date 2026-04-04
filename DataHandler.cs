@@ -9,7 +9,7 @@ public static class DataHandler
         string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
         // Define a subfolder for your specific application to keep things organized
-        string appFolderPath = Path.Combine(appDataPath, "YourAppName"); 
+        string appFolderPath = Path.Combine(appDataPath, "TherapyTime"); 
 
         // Ensure the directory exists
         if (!Directory.Exists(appFolderPath))

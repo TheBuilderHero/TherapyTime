@@ -10,11 +10,12 @@
                   SelectionMode="Single"
                   GridLinesVisibility="Horizontal"
                   AlternatingRowBackground="#F9F9F9"
-                  RowHeaderWidth="0">
+                  RowHeaderWidth="0"
+                  IsReadOnly="True">
             <DataGrid.Columns>
                 <!-- Standard Text Columns -->
                 <DataGridTextColumn Header="Student Name" Binding="{Binding Name}" Width="*" />
-                <DataGridTextColumn Header="Required Mins" Binding="{Binding MonthlyRequiredMinutes}" Width="120" />
+                <DataGridTextColumn Header="Minutes Completed" Binding="{Binding CurrentMonthMinutes}" Width="150" />
                 
                 <!-- Specialized Dates -->
                 <DataGridTextColumn Header="Next Reevaluation" 
@@ -25,7 +26,7 @@
                 <DataGridTemplateColumn Header="Actions" Width="100">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <Button Content="Schedule" Padding="5,2"/> <!--  Click=""  -->
+                            <Button Content="Meeting Complete" Padding="5,2" Click="MeetingComplete_Click"/>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>

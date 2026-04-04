@@ -12,15 +12,16 @@
         <!-- Menu Bar -->
         <Menu Grid.Row="0">
             <MenuItem Header="_File">
-                <MenuItem Header="New"/>
-                <MenuItem Header="Open"/>
+                <MenuItem Header="New IEP" Click="NewIEP_Click"/>
+                <MenuItem Header="Open IEP" Click="OpenIEP_Click"/>
                 <Separator/>
+                <MenuItem Header="New Student" Click="NewStudent_Click"/>
+                <MenuItem Header="Delete Student" x:Name="DeleteStudentMenu"/>
                 <MenuItem Header="Exit" Click="Exit_Click"/>
             </MenuItem>
 
             <MenuItem Header="_Edit">
-                <MenuItem Header="Copy"/>
-                <MenuItem Header="Paste"/>
+                <MenuItem Header="Add Session" Click="AddSession_Click" />
             </MenuItem>
 
             <MenuItem Header="_Help">

@@ -6,6 +6,7 @@ public class Session
     public int Minutes { get; set; }
     public SessionCode Code { get; set; }  // enum now
     public bool IsCompleted { get; set; } = false;
+    public DateTime? LinkedSessionDate { get; set; }
 
     public Session(DateTime date, int minutes, SessionCode code)
     {

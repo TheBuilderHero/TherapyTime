@@ -47,6 +47,8 @@ public partial class EditDaySessionsWindow : Window
             }
         }
 
+        public bool IsLinkedToMu { get; set; }
+
         public bool IsCompleted
         {
             get => _isCompleted;
@@ -65,12 +67,16 @@ public partial class EditDaySessionsWindow : Window
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public EditableSession(Student student, int? minutes = null, SessionCode? code = null, bool isCompleted = false)
+        public DateTime? LinkedSessionDate { get; set; }
+
+        public EditableSession(Student student, int? minutes = null, SessionCode? code = null, bool isCompleted = false, DateTime? linkedSessionDate = null, bool isLinkedToMu = false)
         {
             Student = student;
             _minutes = minutes ?? 30;
             _code = code ?? SessionCode.IC;
             _isCompleted = isCompleted;
+            LinkedSessionDate = linkedSessionDate;
+            IsLinkedToMu = isLinkedToMu;
         }
 
         public void ToggleCompletion()
@@ -150,7 +156,9 @@ public partial class EditDaySessionsWindow : Window
                     s,
                     session.Minutes,
                     session.Code,
-                    session.IsCompleted
+                    session.IsCompleted,
+                    session.LinkedSessionDate,
+                    session.Code == SessionCode.NM && s.Sessions.Any(mu => mu.Code == SessionCode.MU && mu.LinkedSessionDate.HasValue && mu.LinkedSessionDate.Value.Date == session.Date.Date)
                 );
             })
             .Where(es => es != null)
@@ -169,7 +177,11 @@ public partial class EditDaySessionsWindow : Window
             es.Student.Sessions.RemoveAll(s => s.Date.Date == _date.Date);
 
             // Add new/updated session
-            es.Student.Sessions.Add(new Session(_date, es.Minutes, es.Code) { IsCompleted = es.IsCompleted });
+            es.Student.Sessions.Add(new Session(_date, es.Minutes, es.Code)
+            {
+                IsCompleted = es.IsCompleted,
+                LinkedSessionDate = es.LinkedSessionDate
+            });
         }
 
         DialogResult = true; // close window
@@ -191,8 +203,15 @@ public partial class EditDaySessionsWindow : Window
             if (!row.IsCompleted && row.Code == SessionCode.MU)
             {
                 // Open popup to select NM session for linking (no change to NM)
-                var selector = new MakeupSessionSelectorWindow(row.Student);
-                selector.ShowDialog(); // No need to check result, just for linking
+                var selector = new MakeupSessionSelectorWindow(row.Student, row);
+                if (selector.ShowDialog() == true && selector.SelectedSession != null)
+                {
+                    row.LinkedSessionDate = selector.SelectedSession.Date;
+                }
+                else
+                {
+                    return; // Do not complete MU session without a linked NM session
+                }
             }
             row.ToggleCompletion();
         }
@@ -211,7 +230,7 @@ public partial class EditDaySessionsWindow : Window
         }
     }
 
-    private static T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+    private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
     {
         var parent = VisualTreeHelper.GetParent(child);
         while (parent != null && !(parent is T))

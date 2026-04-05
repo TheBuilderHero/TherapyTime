@@ -22,48 +22,38 @@ public partial class MainWindow : Window
     private int dayMax = 30; // fallback total number of days when end date is missing
     private DateTime _startDate;
     private DateTime _endDate;
-    private string _studentFilePath;
+    private string _studentFilePath = string.Empty;
     private List<Student> _allStudents = new List<Student>();
     public MainWindow()
     {
         InitializeComponent();
 
-        // Load students from JSON ()
-        List<Student> allStudents;
-
-         _studentFilePath = DataHandler.GetDataFilePath("students.json");
-
-
-        if (File.Exists(_studentFilePath))
-        {
-            string json = File.ReadAllText(_studentFilePath);
-            allStudents = StudentManager.LoadFromJson(json);
-        }
-        else
-        {
-            allStudents = new List<Student>();
-        }
-
-        _allStudents = File.Exists(_studentFilePath) 
-            ? StudentManager.LoadFromJson(File.ReadAllText(_studentFilePath))
-            : new List<Student>();
-
-        // After loading students
-        PopulateDeleteStudentMenu();
-
-        
         Welcome welcomeWindow = new Welcome();
-        if(welcomeWindow.ShowDialog() == true)
+        if (welcomeWindow.ShowDialog() == true)
         {
             _startDate = welcomeWindow.getStartDate();
             _endDate = welcomeWindow.getEndDate();
-            //MessageBox.Show($"You picked: {_startDate} to {_endDate}");
+            _studentFilePath = DataHandler.GetDataFilePath(welcomeWindow.getSaveFileName());
+
+            if (File.Exists(_studentFilePath))
+            {
+                _allStudents = StudentManager.LoadFromJson(File.ReadAllText(_studentFilePath));
+            }
+            else
+            {
+                _allStudents = new List<Student>();
+            }
+
+            // Update the window title with the IEP filename
+            string iepFileName = System.IO.Path.GetFileName(_studentFilePath);
+            this.Title = $"TherapyTime - {iepFileName}";
+
+            PopulateDeleteStudentMenu();
             CreateButtonGrid();
-        } 
+        }
         else
         {
-            //User closes the window
-            Close(); //close the whole program.
+            Close();
         }
     }
 
@@ -188,43 +178,48 @@ public partial class MainWindow : Window
     private void NewIEP_Click(object sender, RoutedEventArgs e)
     {
         // Confirm with user
-        if (MessageBox.Show("Start a new IEP? This will clear current data.", "Confirm", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+        if (MessageBox.Show("Start a new IEP? This will clear current data and return to the Welcome screen.", "Confirm", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
         {
-            _allStudents.Clear();
-            _startDate = DateTime.Today; // default start date
-            _endDate = _startDate.AddDays(dayMax - 1);
-            CreateButtonGrid(); // reset calendar
-            SaveStudents(); // save empty IEP
-            MessageBox.Show("New IEP created.", "Info");
+            Welcome welcomeWindow = new Welcome();
+            if (welcomeWindow.ShowDialog() == true)
+            {
+                _startDate = welcomeWindow.getStartDate();
+                _endDate = welcomeWindow.getEndDate();
+                _studentFilePath = DataHandler.GetDataFilePath(welcomeWindow.getSaveFileName());
+
+                // Check if the file already exists
+                if (File.Exists(_studentFilePath))
+                {
+                    _allStudents = StudentManager.LoadFromJson(File.ReadAllText(_studentFilePath));
+                    MessageBox.Show($"IEP loaded with {_allStudents.Count} students.", "Info");
+                }
+                else
+                {
+                    _allStudents = new List<Student>();
+                    SaveStudents(); // save empty IEP
+                    MessageBox.Show("New IEP created.", "Info");
+                }
+
+                // Update the window title with the IEP filename
+                string iepFileName = System.IO.Path.GetFileName(_studentFilePath);
+                this.Title = $"TherapyTime - {iepFileName}";
+
+                PopulateDeleteStudentMenu();
+                CreateButtonGrid();
+            }
         }
     }
 
-    // --- Open IEP ---
-    private void OpenIEP_Click(object sender, RoutedEventArgs e)
+    private void SaveIEP_Click(object sender, RoutedEventArgs e)
     {
-        OpenFileDialog dlg = new OpenFileDialog
+        try
         {
-            Filter = "JSON Files|*.json",
-            InitialDirectory = System.IO.Path.GetDirectoryName(_studentFilePath)
-        };
-
-        if (dlg.ShowDialog() == true)
+            SaveStudents();
+            MessageBox.Show("IEP saved successfully.", "Info");
+        }
+        catch (Exception ex)
         {
-            try
-            {
-                string json = File.ReadAllText(dlg.FileName);
-                _allStudents = StudentManager.LoadFromJson(json);
-                MessageBox.Show($"IEP loaded with {_allStudents.Count} students.", "Info");
-
-                // Optionally ask for a start date for this IEP
-                _startDate = DateTime.Today;
-                _endDate = _startDate.AddDays(dayMax - 1);
-                CreateButtonGrid();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Failed to load IEP: " + ex.Message, "Error");
-            }
+            MessageBox.Show("Failed to save IEP: " + ex.Message, "Error");
         }
     }
 

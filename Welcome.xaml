@@ -1,14 +1,14 @@
 <Window x:Class="TherapyTime.Welcome"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Welcome" Height="450" Width="800"
+        Title="Welcome" Height="550" Width="800"
         Background="#F5F7FA">
 
     <Grid>
         <Border Background="White"
                 CornerRadius="10"
                 Padding="30"
-                Width="350"
+                Width="450"
                 VerticalAlignment="Center"
                 HorizontalAlignment="Center">
             <Border.Effect>
@@ -27,64 +27,198 @@
                            Margin="0,0,0,20"
                            HorizontalAlignment="Center"/>
 
-                <!-- Label -->
-                <TextBlock Text="Pick Start Date for IEP"
-                           FontSize="14"
-                           Foreground="#555"
-                           Margin="0,0,0,5"/>
-
-                <!-- DatePicker -->
-                <DatePicker x:Name="IEPStartDate"
-                            Height="35"
+                <!-- Mode Selection Buttons -->
+                <StackPanel Orientation="Horizontal"
                             Margin="0,0,0,20"
-                            Background="#F0F2F5"
-                            BorderBrush="#D0D5DD"/>
+                            HorizontalAlignment="Center">
+                    <Button x:Name="NewButton"
+                            Content="Create New IEP"
+                            Width="200"
+                            Height="40"
+                            Background="#4CAF50"
+                            Foreground="White"
+                            FontWeight="Bold"
+                            BorderThickness="0"
+                            Cursor="Hand"
+                            Click="NewButton_Click"
+                            Margin="0,0,10,0">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Background" Value="#4CAF50"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    CornerRadius="6">
+                                                <ContentPresenter HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#45A049"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button x:Name="OpenButton"
+                            Content="Open Existing IEP"
+                            Width="200"
+                            Height="40"
+                            Background="#2196F3"
+                            Foreground="White"
+                            FontWeight="Bold"
+                            BorderThickness="0"
+                            Cursor="Hand"
+                            Click="OpenButton_Click">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Background" Value="#2196F3"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    CornerRadius="6">
+                                                <ContentPresenter HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#1976D2"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </StackPanel>
 
-                <TextBlock Text="Pick End Date for IEP"
-                           FontSize="14"
-                           Foreground="#555"
-                           Margin="0,0,0,5"/>
+                <!-- Panel for Creating New IEP -->
+                <StackPanel x:Name="NewPanel" Visibility="Visible">
+                    <!-- Label -->
+                    <TextBlock Text="Pick Start Date for IEP"
+                               FontSize="14"
+                               Foreground="#555"
+                               Margin="0,0,0,5"/>
 
-                <DatePicker x:Name="IEPEndDate"
-                            Height="35"
-                            Margin="0,0,0,20"
-                            Background="#F0F2F5"
-                            BorderBrush="#D0D5DD"/>
+                    <!-- DatePicker -->
+                    <DatePicker x:Name="IEPStartDate"
+                                Height="35"
+                                Margin="0,0,0,20"
+                                Background="#F0F2F5"
+                                BorderBrush="#D0D5DD"
+                                SelectedDateChanged="IEPStartDate_SelectedDateChanged"/>
 
-                <!-- Button -->
-                <Button x:Name="Submit"
-                        Content="Submit"
-                        Height="40"
-                        Background="#4CAF50"
-                        Foreground="White"
-                        FontWeight="Bold"
-                        BorderThickness="0"
-                        Cursor="Hand"
-                        Click="Submit_Click">
+                    <TextBlock Text="Pick End Date for IEP"
+                               FontSize="14"
+                               Foreground="#555"
+                               Margin="0,0,0,5"/>
 
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Background" Value="#4CAF50"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}"
-                                                CornerRadius="6">
-                                            <ContentPresenter HorizontalAlignment="Center"
-                                                              VerticalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#45A049"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
+                    <DatePicker x:Name="IEPEndDate"
+                                Height="35"
+                                Margin="0,0,0,20"
+                                Background="#F0F2F5"
+                                BorderBrush="#D0D5DD"
+                                SelectedDateChanged="IEPEndDate_SelectedDateChanged"/>
 
-                </Button>
+                    <TextBlock Text="Save File Name"
+                               FontSize="14"
+                               Foreground="#555"
+                               Margin="0,0,0,5"/>
+
+                    <TextBox x:Name="IEPFileName"
+                             Height="35"
+                             Margin="0,0,0,20"
+                             Background="#F0F2F5"
+                             BorderBrush="#D0D5DD"
+                             TextChanged="IEPFileName_TextChanged"/>
+
+                    <!-- Submit Button for New -->
+                    <Button x:Name="SubmitNew"
+                            Content="Create"
+                            Height="40"
+                            Background="#4CAF50"
+                            Foreground="White"
+                            FontWeight="Bold"
+                            BorderThickness="0"
+                            Cursor="Hand"
+                            Click="Submit_Click">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Background" Value="#4CAF50"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    CornerRadius="6">
+                                                <ContentPresenter HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#45A049"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </StackPanel>
+
+                <!-- Panel for Opening Existing IEP -->
+                <StackPanel x:Name="OpenPanel" Visibility="Collapsed">
+                    <TextBlock Text="Select an existing IEP:"
+                               FontSize="14"
+                               Foreground="#555"
+                               Margin="0,0,0,10"/>
+
+                    <ListBox x:Name="IEPFileList"
+                             Height="250"
+                             Margin="0,0,0,20"
+                             Background="#F0F2F5"
+                             BorderBrush="#D0D5DD"
+                             MouseDoubleClick="IEPFileList_MouseDoubleClick"/>
+
+                    <!-- Open Button for Existing -->
+                    <Button x:Name="SubmitOpen"
+                            Content="Open"
+                            Height="40"
+                            Background="#2196F3"
+                            Foreground="White"
+                            FontWeight="Bold"
+                            BorderThickness="0"
+                            Cursor="Hand"
+                            Click="OpenSubmit_Click">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Background" Value="#2196F3"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    CornerRadius="6">
+                                                <ContentPresenter HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#1976D2"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </StackPanel>
 
             </StackPanel>
         </Border>

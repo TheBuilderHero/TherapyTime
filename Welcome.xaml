@@ -126,18 +126,6 @@
                                 BorderBrush="#D0D5DD"
                                 SelectedDateChanged="IEPEndDate_SelectedDateChanged"/>
 
-                    <TextBlock Text="Save File Name"
-                               FontSize="14"
-                               Foreground="#555"
-                               Margin="0,0,0,5"/>
-
-                    <TextBox x:Name="IEPFileName"
-                             Height="35"
-                             Margin="0,0,0,20"
-                             Background="#F0F2F5"
-                             BorderBrush="#D0D5DD"
-                             TextChanged="IEPFileName_TextChanged"/>
-
                     <!-- Submit Button for New -->
                     <Button x:Name="SubmitNew"
                             Content="Create"

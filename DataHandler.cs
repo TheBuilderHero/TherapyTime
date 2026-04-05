@@ -22,4 +22,9 @@ public static class DataHandler
 
         return fullPath;
     }
+
+    public static string GetPersistentStudentsFilePath()
+    {
+        return GetDataFilePath("students.json");
+    }
 }

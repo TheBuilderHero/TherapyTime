@@ -29,8 +29,11 @@ public partial class EditDaySessionsWindow : Window
         private int _minutes;
         private SessionCode _code;
         private bool _isCompleted;
+        private TimeSpan _timeOfDay;
 
         public Student Student { get; set; } = null!;
+        public string SessionId { get; set; } = string.Empty;
+        public List<TimeSpan> TimeItems { get; } = BuildTimeItems();
         public List<SessionCodeItem> SessionCodeItems { get; } = new List<SessionCodeItem>
         {
             new SessionCodeItem(SessionCode.IC, "Incomplete - session has not yet taken place"),
@@ -54,6 +57,22 @@ public partial class EditDaySessionsWindow : Window
                 }
             }
         }
+
+        public TimeSpan TimeOfDay
+        {
+            get => _timeOfDay;
+            set
+            {
+                if (_timeOfDay != value)
+                {
+                    _timeOfDay = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(TimeDisplay));
+                }
+            }
+        }
+
+        public string TimeDisplay => DateTime.Today.Add(TimeOfDay).ToString("hh:mm tt");
 
         public SessionCode Code
         {
@@ -88,18 +107,36 @@ public partial class EditDaySessionsWindow : Window
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
+        public string? LinkedSessionId { get; set; }
         public DateTime? LinkedSessionDate { get; set; }
         public string Notes { get; set; } = string.Empty;
 
-        public EditableSession(Student student, int? minutes = null, SessionCode? code = null, bool isCompleted = false, DateTime? linkedSessionDate = null, bool isLinkedToMu = false, string notes = "")
+        public EditableSession(string sessionId, Student student, TimeSpan timeOfDay, int? minutes = null, SessionCode? code = null, bool isCompleted = false, string? linkedSessionId = null, DateTime? linkedSessionDate = null, bool isLinkedToMu = false, string notes = "")
         {
+            SessionId = sessionId;
             Student = student;
+            _timeOfDay = timeOfDay;
             _minutes = minutes ?? 30;
             _code = code ?? SessionCode.IC;
             _isCompleted = isCompleted;
+            LinkedSessionId = linkedSessionId;
             LinkedSessionDate = linkedSessionDate;
             IsLinkedToMu = isLinkedToMu;
             Notes = notes;
+        }
+
+        private static List<TimeSpan> BuildTimeItems()
+        {
+            var result = new List<TimeSpan>();
+            for (int hour = 7; hour <= 18; hour++)
+            {
+                for (int minute = 0; minute < 60; minute += 15)
+                {
+                    result.Add(new TimeSpan(hour, minute, 0));
+                }
+            }
+
+            return result;
         }
 
         public void ToggleCompletion()
@@ -159,6 +196,7 @@ public partial class EditDaySessionsWindow : Window
     }
 
     private List<Student> _allStudents;
+    private List<Student> _studentsAvailableForAdd;
     private DateTime _date;
     private DateTime _iepStartDate;
     private DateTime _iepEndDate;
@@ -175,11 +213,12 @@ public partial class EditDaySessionsWindow : Window
 
     private List<StudentSnapshot> _originalStudentSnapshots = new List<StudentSnapshot>();
 
-    public EditDaySessionsWindow(List<Student> students, DateTime date, DateTime iepStartDate, DateTime iepEndDate)
+    public EditDaySessionsWindow(List<Student> students, List<Student> studentsAvailableForAdd, DateTime date, DateTime iepStartDate, DateTime iepEndDate)
     {
         InitializeComponent();
 
         _allStudents = students;
+        _studentsAvailableForAdd = studentsAvailableForAdd;
         _date = date;
         _iepStartDate = iepStartDate;
         _iepEndDate = iepEndDate;
@@ -194,7 +233,10 @@ public partial class EditDaySessionsWindow : Window
                 .Where(sess => sess.Date.Date == date.Date)
                 .Select(sess => new Session(sess.Date, sess.Minutes, sess.Code)
                 {
+                    Id = sess.Id,
+                    TimeOfDay = sess.TimeOfDay,
                     IsCompleted = sess.IsCompleted,
+                    LinkedSessionId = sess.LinkedSessionId,
                     LinkedSessionDate = sess.LinkedSessionDate,
                     Notes = sess.Notes
                 })
@@ -203,44 +245,123 @@ public partial class EditDaySessionsWindow : Window
 
         // Build the list of editable sessions for the DataGrid
         _editableSessions = students
-            .Select(s =>
-            {
-                var session = s.Sessions.FirstOrDefault(sess => sess.Date.Date == date.Date);
-                if (session == null)
-                    return null;
-
-                return new EditableSession(
+            .SelectMany(s => s.Sessions
+                .Where(sess => sess.Date.Date == date.Date)
+                .Select(sess => new EditableSession(
+                    sess.Id,
                     s,
-                    session.Minutes,
-                    session.Code,
-                    session.IsCompleted,
-                    session.LinkedSessionDate,
-                    session.Code == SessionCode.NM && s.Sessions.Any(mu => mu.Code == SessionCode.MU && mu.LinkedSessionDate.HasValue && mu.LinkedSessionDate.Value.Date == session.Date.Date),
-                    session.Notes
-                );
-            })
-            .Where(es => es != null)
-            .Select(es => es!)
+                    sess.TimeOfDay,
+                    sess.Minutes,
+                    sess.Code,
+                    sess.IsCompleted,
+                    sess.LinkedSessionId,
+                    sess.LinkedSessionDate,
+                    sess.Code == SessionCode.NM && s.Sessions.Any(mu => mu.Code == SessionCode.MU && mu.LinkedSessionId == sess.Id),
+                    sess.Notes
+                )))
+            .OrderBy(es => es.TimeOfDay)
+            .ThenBy(es => es.Student.Name)
             .ToList();
 
         // Bind the list to the DataGrid
         SessionsGrid.ItemsSource = _editableSessions;
     }
 
-    private void Save_Click(object sender, RoutedEventArgs e)
+    private bool SaveSessionsCore()
     {
+        // Commit any active edit before validating/saving.
+        SessionsGrid.CommitEdit(DataGridEditingUnit.Cell, true);
+        SessionsGrid.CommitEdit(DataGridEditingUnit.Row, true);
+
+        // Validate no overlapping sessions among pending edits for the entire day
+        var sorted = _editableSessions
+            .OrderBy(es => es.TimeOfDay)
+            .ThenBy(es => es.Student.Name)
+            .ToList();
+
+        for (int i = 0; i < sorted.Count - 1; i++)
+        {
+            var a = sorted[i];
+            var b = sorted[i + 1];
+            var aEnd = a.TimeOfDay.Add(TimeSpan.FromMinutes(a.Minutes));
+            if (b.TimeOfDay < aEnd)
+            {
+                MessageBox.Show(
+                    "The following sessions overlap on this day:\n" +
+                    $"  {a.Student.Name}: {DateTime.Today.Add(a.TimeOfDay):hh:mm tt} - {a.Minutes} min ({a.Code})\n" +
+                    $"  {b.Student.Name}: {DateTime.Today.Add(b.TimeOfDay):hh:mm tt} - {b.Minutes} min ({b.Code})\n\n" +
+                    "Please adjust session times before saving.",
+                    "Session Conflict", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+        }
+
         foreach (var es in _editableSessions)
         {
-            // Remove existing session on this date
-            es.Student.Sessions.RemoveAll(s => s.Date.Date == _date.Date);
+            var matchingSession = es.Student.Sessions.FirstOrDefault(s => s.Id == es.SessionId);
+            if (matchingSession == null)
+                continue;
 
-            // Add new/updated session
-            es.Student.Sessions.Add(new Session(_date, es.Minutes, es.Code)
-            {
-                IsCompleted = es.IsCompleted,
-                LinkedSessionDate = es.LinkedSessionDate,
-                Notes = es.Notes
-            });
+            matchingSession.Date = _date.Date;
+            matchingSession.TimeOfDay = es.TimeOfDay;
+            matchingSession.Minutes = es.Minutes;
+            matchingSession.Code = es.Code;
+            matchingSession.IsCompleted = es.IsCompleted;
+            matchingSession.LinkedSessionId = es.LinkedSessionId;
+            matchingSession.LinkedSessionDate = es.LinkedSessionDate;
+            matchingSession.Notes = es.Notes;
+        }
+
+        foreach (var student in _allStudents)
+        {
+            student.Sessions = student.Sessions
+                .OrderBy(s => s.SessionDateTime)
+                .ThenBy(s => s.Id)
+                .ToList();
+        }
+
+        return true;
+    }
+
+    private void CaptureCurrentStateAsOriginal()
+    {
+        _originalStudentSnapshots = _allStudents.Select(s => new StudentSnapshot
+        {
+            Student = s,
+            TotalMinutesReceived = s.TotalMinutesReceived,
+            TotalMinutesRequired = s.TotalMinutesRequired,
+            SessionsOnDate = s.Sessions
+                .Where(sess => sess.Date.Date == _date.Date)
+                .Select(sess => new Session(sess.Date, sess.Minutes, sess.Code)
+                {
+                    Id = sess.Id,
+                    TimeOfDay = sess.TimeOfDay,
+                    IsCompleted = sess.IsCompleted,
+                    LinkedSessionId = sess.LinkedSessionId,
+                    LinkedSessionDate = sess.LinkedSessionDate,
+                    Notes = sess.Notes
+                })
+                .ToList()
+        }).ToList();
+    }
+
+    private void SaveSessions_Click(object sender, RoutedEventArgs e)
+    {
+        if (!SaveSessionsCore())
+        {
+            return;
+        }
+
+        _hasUnsavedChanges = false;
+        CaptureCurrentStateAsOriginal();
+        MessageBox.Show("Sessions saved. You can continue editing.", "Saved", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void Save_Click(object sender, RoutedEventArgs e)
+    {
+        if (!SaveSessionsCore())
+        {
+            return;
         }
 
         _hasUnsavedChanges = false;
@@ -262,10 +383,25 @@ public partial class EditDaySessionsWindow : Window
 
             if (!row.IsCompleted && row.Code == SessionCode.MU)
             {
+                if (_hasUnsavedChanges)
+                {
+                    var warningResult = MessageBox.Show(
+                        "You have unsaved changes. Until you save, newly edited or added NM sessions may not appear in the makeup-session link list.\n\nSave your changes first for the most up-to-date list.\n\nContinue anyway?",
+                        "Unsaved Changes",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning);
+
+                    if (warningResult == MessageBoxResult.No)
+                    {
+                        return;
+                    }
+                }
+
                 // Open popup to select NM session for linking (no change to NM)
                 var selector = new MakeupSessionSelectorWindow(row.Student, row);
                 if (selector.ShowDialog() == true && selector.SelectedSession != null)
                 {
+                    row.LinkedSessionId = selector.SelectedSession.Id;
                     row.LinkedSessionDate = selector.SelectedSession.Date;
                 }
                 else
@@ -316,7 +452,7 @@ public partial class EditDaySessionsWindow : Window
     private void AddSession_Click(object sender, RoutedEventArgs e)
     {
         // Open AddSessionWindow with the current date pre-selected
-        AddSessionWindow addSessionWindow = new AddSessionWindow(_allStudents, _iepStartDate, _iepEndDate, _date, true)
+        AddSessionWindow addSessionWindow = new AddSessionWindow(_studentsAvailableForAdd, _iepStartDate, _iepEndDate, _date, true)
         {
             Owner = this
         };
@@ -327,23 +463,38 @@ public partial class EditDaySessionsWindow : Window
             var date = addSessionWindow.SelectedDate;
             int minutes = addSessionWindow.Minutes;
             SessionCode sessionCode = addSessionWindow.SessionCode;
+            TimeSpan sessionTime = addSessionWindow.SessionTime;
 
-            if (!student.HasSessionOn(date))
+            // Check for overlapping sessions across all students on the selected date
+            var newStart = sessionTime;
+            var newEnd = newStart.Add(TimeSpan.FromMinutes(minutes));
+            var conflict = _allStudents
+                .SelectMany(s => s.Sessions
+                    .Where(sess => sess.Date.Date == date.Date)
+                    .Select(sess => new { Student = s, Session = sess }))
+                .FirstOrDefault(x =>
+                {
+                    var existingEnd = x.Session.TimeOfDay.Add(TimeSpan.FromMinutes(x.Session.Minutes));
+                    return newStart < existingEnd && newEnd > x.Session.TimeOfDay;
+                });
+            if (conflict != null)
             {
-                student.ScheduleSession(date, minutes, sessionCode);
-                // Note: We don't call SaveStudents() here because the user might make additional changes
-                // in the EditDaySessionsWindow before saving. The Save_Click method will handle persistence.
-                
-                MessageBox.Show($"Session added for {student.Name} on {date:MM/dd/yyyy} ({minutes} minutes, code: {sessionCode}).", "Info");
-                
-                // Refresh the DataGrid to show the newly added session
-                RefreshDataGrid();
-                _hasUnsavedChanges = true;
+                MessageBox.Show(
+                    $"This time conflicts with an existing session for {conflict.Student.Name}:\n" +
+                    $"{DateTime.Today.Add(conflict.Session.TimeOfDay):hh:mm tt} - {conflict.Session.Minutes} min ({conflict.Session.Code})",
+                    "Session Conflict", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
             }
-            else
-            {
-                MessageBox.Show($"{student.Name} already has a session on {date:MM/dd/yyyy}.", "Info");
-            }
+
+            student.ScheduleSession(date, minutes, sessionCode, sessionTime);
+            // Note: We don't call SaveStudents() here because the user might make additional changes
+            // in the EditDaySessionsWindow before saving. The Save_Click method will handle persistence.
+
+            MessageBox.Show($"Session added for {student.Name} on {date:MM/dd/yyyy} at {DateTime.Today.Add(sessionTime):hh:mm tt} ({minutes} minutes, code: {sessionCode}).", "Info");
+
+            // Refresh the DataGrid to show the newly added session
+            RefreshDataGrid();
+            _hasUnsavedChanges = true;
         }
     }
 
@@ -355,18 +506,21 @@ public partial class EditDaySessionsWindow : Window
             string warningMessage = "";
             if (row.Code == SessionCode.NM)
             {
-                var linkedMu = row.Student.Sessions.FirstOrDefault(s => s.Code == SessionCode.MU && s.LinkedSessionDate.HasValue && s.LinkedSessionDate.Value.Date == _date.Date);
+                var linkedMu = row.Student.Sessions.Where(s => s.Code == SessionCode.MU && s.LinkedSessionId == row.SessionId).ToList();
                 if (linkedMu != null)
                 {
-                    warningMessage = $"\n\nWarning: This session has a linked makeup session on {linkedMu.Date:MM/dd/yyyy}. Deleting this session will break the link.";
+                    if (linkedMu.Count > 0)
+                    {
+                        warningMessage = "\n\nWarning: This session has linked makeup session(s). Deleting this session will break those links.";
+                    }
                 }
             }
-            else if (row.Code == SessionCode.MU && row.LinkedSessionDate.HasValue)
+            else if (row.Code == SessionCode.MU && !string.IsNullOrWhiteSpace(row.LinkedSessionId))
             {
-                var linkedNm = row.Student.Sessions.FirstOrDefault(s => s.Code == SessionCode.NM && s.Date.Date == row.LinkedSessionDate.Value.Date);
+                var linkedNm = row.Student.Sessions.FirstOrDefault(s => s.Code == SessionCode.NM && s.Id == row.LinkedSessionId);
                 if (linkedNm != null)
                 {
-                    warningMessage = $"\n\nWarning: This makeup session is linked to a missed session on {row.LinkedSessionDate.Value:MM/dd/yyyy}. Deleting this session will break the link.";
+                    warningMessage = $"\n\nWarning: This makeup session is linked to a missed session on {linkedNm.Date:MM/dd/yyyy} at {DateTime.Today.Add(linkedNm.TimeOfDay):hh:mm tt}. Deleting this session will break the link.";
                 }
             }
 
@@ -378,8 +532,22 @@ public partial class EditDaySessionsWindow : Window
 
             if (result == MessageBoxResult.Yes)
             {
+                var rowSession = row.Student.Sessions.FirstOrDefault(s => s.Id == row.SessionId);
+                if (rowSession == null)
+                {
+                    RefreshDataGrid();
+                    return;
+                }
+
                 // Remove the session from the student's sessions list
-                row.Student.Sessions.RemoveAll(s => s.Date.Date == _date.Date);
+                row.Student.Sessions.RemoveAll(s => s.Id == row.SessionId);
+
+                // If deleting an NM session, unlink any MU sessions connected to it
+                foreach (var mu in row.Student.Sessions.Where(s => s.Code == SessionCode.MU && s.LinkedSessionId == row.SessionId))
+                {
+                    mu.LinkedSessionId = null;
+                    mu.LinkedSessionDate = null;
+                }
 
                 // If the session was completed, we need to undo the minute adjustments
                 if (row.IsCompleted)
@@ -436,24 +604,22 @@ public partial class EditDaySessionsWindow : Window
     {
         // Rebuild the list of editable sessions
         _editableSessions = _allStudents
-            .Select(s =>
-            {
-                var session = s.Sessions.FirstOrDefault(sess => sess.Date.Date == _date.Date);
-                if (session == null)
-                    return null;
-
-                return new EditableSession(
+            .SelectMany(s => s.Sessions
+                .Where(sess => sess.Date.Date == _date.Date)
+                .Select(sess => new EditableSession(
+                    sess.Id,
                     s,
-                    session.Minutes,
-                    session.Code,
-                    session.IsCompleted,
-                    session.LinkedSessionDate,
-                    session.Code == SessionCode.NM && s.Sessions.Any(mu => mu.Code == SessionCode.MU && mu.LinkedSessionDate.HasValue && mu.LinkedSessionDate.Value.Date == session.Date.Date),
-                    session.Notes
-                );
-            })
-            .Where(es => es != null)
-            .Select(es => es!)
+                    sess.TimeOfDay,
+                    sess.Minutes,
+                    sess.Code,
+                    sess.IsCompleted,
+                    sess.LinkedSessionId,
+                    sess.LinkedSessionDate,
+                    sess.Code == SessionCode.NM && s.Sessions.Any(mu => mu.Code == SessionCode.MU && mu.LinkedSessionId == sess.Id),
+                    sess.Notes
+                )))
+            .OrderBy(es => es.TimeOfDay)
+            .ThenBy(es => es.Student.Name)
             .ToList();
 
         // Re-bind the list to the DataGrid
@@ -461,11 +627,11 @@ public partial class EditDaySessionsWindow : Window
         SessionsGrid.ItemsSource = _editableSessions;
     }
 
-    private static T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+    private static T? FindVisualParent<T>(DependencyObject child) where T : DependencyObject
     {
         var parentObject = VisualTreeHelper.GetParent(child);
         if (parentObject == null) return null;
-        T parent = parentObject as T;
+        T? parent = parentObject as T;
         if (parent != null) return parent;
         return FindVisualParent<T>(parentObject);
     }
@@ -525,11 +691,14 @@ public partial class EditDaySessionsWindow : Window
             student.Sessions.RemoveAll(s => s.Date.Date == _date.Date);
             student.Sessions.AddRange(snapshot.SessionsOnDate.Select(sess => new Session(sess.Date, sess.Minutes, sess.Code)
             {
+                Id = sess.Id,
+                TimeOfDay = sess.TimeOfDay,
                 IsCompleted = sess.IsCompleted,
+                LinkedSessionId = sess.LinkedSessionId,
                 LinkedSessionDate = sess.LinkedSessionDate,
                 Notes = sess.Notes
             }));
-            student.Sessions = student.Sessions.OrderBy(s => s.Date).ToList();
+            student.Sessions = student.Sessions.OrderBy(s => s.SessionDateTime).ThenBy(s => s.Id).ToList();
         }
     }
 }

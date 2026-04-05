@@ -11,8 +11,6 @@ public partial class Welcome : Window
     private DateTime _startDate;
     private DateTime _endDate;
     private string _saveFileName = string.Empty;
-    private bool _fileNameEdited = false;
-    private bool _suppressFileNameTextChanged = false;
     private const int DefaultIepDays = 30;
 
     public Welcome()
@@ -50,7 +48,9 @@ public partial class Welcome : Window
                 return;
             }
 
-            var jsonFiles = Directory.GetFiles(appFolderPath, "*.json").OrderByDescending(f => File.GetLastWriteTime(f));
+            var jsonFiles = Directory.GetFiles(appFolderPath, "*.json")
+                .Where(f => !Path.GetFileName(f).Equals("students.json", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(f => File.GetLastWriteTime(f));
 
             foreach (var filePath in jsonFiles)
             {
@@ -127,11 +127,7 @@ public partial class Welcome : Window
             }
         }
 
-        _saveFileName = NormalizeFileName(IEPFileName.Text.Trim());
-        if (string.IsNullOrWhiteSpace(_saveFileName))
-        {
-            _saveFileName = GetDefaultFileName(_startDate, _endDate);
-        }
+        _saveFileName = GetDefaultFileName(_startDate, _endDate);
 
         this.DialogResult = true;
     }
@@ -146,7 +142,8 @@ public partial class Welcome : Window
             if (!Directory.Exists(appFolderPath))
                 return false;
 
-            var jsonFiles = Directory.GetFiles(appFolderPath, "*.json");
+            var jsonFiles = Directory.GetFiles(appFolderPath, "*.json")
+                .Where(f => !Path.GetFileName(f).Equals("students.json", StringComparison.OrdinalIgnoreCase));
 
             foreach (var file in jsonFiles)
             {
@@ -198,35 +195,19 @@ public partial class Welcome : Window
             IEPEndDate.SelectedDate = startDate.Value.AddDays(DefaultIepDays - 1);
         }
 
-        if (!_fileNameEdited)
-        {
-            UpdateDefaultFileName();
-        }
+        UpdateDefaultFileName();
     }
 
     private void IEPEndDate_SelectedDateChanged(object sender, RoutedEventArgs e)
     {
-        if (!_fileNameEdited)
-        {
-            UpdateDefaultFileName();
-        }
-    }
-
-    private void IEPFileName_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
-    {
-        if (_suppressFileNameTextChanged)
-            return;
-
-        _fileNameEdited = true;
+        UpdateDefaultFileName();
     }
 
     private void UpdateDefaultFileName()
     {
         _startDate = IEPStartDate.SelectedDate ?? DateTime.Today;
         _endDate = IEPEndDate.SelectedDate ?? _startDate.AddDays(DefaultIepDays - 1);
-        _suppressFileNameTextChanged = true;
-        IEPFileName.Text = GetDefaultFileName(_startDate, _endDate);
-        _suppressFileNameTextChanged = false;
+        // filename is auto-generated from dates; no textbox to update
     }
 
     private static string GetDefaultFileName(DateTime start, DateTime end)
@@ -262,14 +243,10 @@ public partial class Welcome : Window
 
     public string getSaveFileName()
     {
-        // If we're opening an existing file, return the already-set _saveFileName
         if (!string.IsNullOrEmpty(_saveFileName))
-        {
             return _saveFileName;
-        }
 
-        // Otherwise, normalize the textbox input
-        return NormalizeFileName(IEPFileName.Text.Trim());
+        return GetDefaultFileName(_startDate, _endDate);
     }
 
     public void setStartDate(DateTime startDate)

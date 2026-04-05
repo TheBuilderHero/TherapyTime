@@ -5,20 +5,7 @@
         WindowStartupLocation="CenterOwner">
 
     <Grid>
-        <ListBox x:Name="SessionsList" Margin="10">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <TextBlock>
-                        <TextBlock.Text>
-                            <MultiBinding StringFormat="{}{0:MM/dd/yyyy} - {1} minutes">
-                                <Binding Path="Date" />
-                                <Binding Path="Minutes" />
-                            </MultiBinding>
-                        </TextBlock.Text>
-                    </TextBlock>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+        <ListBox x:Name="SessionsList" Margin="10" DisplayMemberPath="DisplayText"/>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="10">
             <Button Content="OK" Width="80" Margin="5" Click="OK_Click" />

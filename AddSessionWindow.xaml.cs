@@ -12,10 +12,12 @@ public partial class AddSessionWindow : Window
     public DateTime SelectedDate { get; private set; }
     public int Minutes { get; private set; }
     public SessionCode SessionCode { get; private set; }
+    public TimeSpan SessionTime { get; private set; } = new TimeSpan(8, 0, 0);
 
     private DateTime _iepStartDate;
     private DateTime _iepEndDate;
     private bool _dateLocked;
+    private readonly List<Student> _allStudents;
 
     private class SessionCodeItem
     {
@@ -29,10 +31,23 @@ public partial class AddSessionWindow : Window
         }
     }
 
+    private class SessionTimeItem
+    {
+        public TimeSpan Time { get; set; }
+        public string DisplayText { get; set; } = string.Empty;
+
+        public SessionTimeItem(TimeSpan time)
+        {
+            Time = time;
+            DisplayText = DateTime.Today.Add(time).ToString("hh:mm tt");
+        }
+    }
+
     public AddSessionWindow(List<Student> students, DateTime iepStartDate, DateTime iepEndDate, DateTime? preselectedDate = null, bool lockDate = false)
     {
         InitializeComponent();
 
+        _allStudents = students;
         _iepStartDate = iepStartDate;
         _iepEndDate = iepEndDate;
         _dateLocked = lockDate;
@@ -47,10 +62,23 @@ public partial class AddSessionWindow : Window
         SessionDatePicker.SelectedDate = preselectedDate ?? DateTime.Today;
         SessionDatePicker.IsEnabled = !_dateLocked;
 
-        // Minutes dropdown (increments of 10)
-        for (int i = 10; i <= 120; i += 10)
+        // Time dropdown (every 15 minutes)
+        var timeItems = new List<SessionTimeItem>();
+        for (int hour = 7; hour <= 18; hour++)
+        {
+            for (int minute = 0; minute < 60; minute += 15)
+            {
+                timeItems.Add(new SessionTimeItem(new TimeSpan(hour, minute, 0)));
+            }
+        }
+        SessionTimeComboBox.ItemsSource = timeItems;
+        SessionTimeComboBox.DisplayMemberPath = "DisplayText";
+        SessionTimeComboBox.SelectedItem = timeItems.FirstOrDefault(t => t.Time == new TimeSpan(8, 0, 0)) ?? timeItems.First();
+
+        // Minutes dropdown (increments of 5)
+        for (int i = 5; i <= 75; i += 5)
             MinutesComboBox.Items.Add(i);
-        MinutesComboBox.SelectedIndex = 2; // default 30 minutes
+        MinutesComboBox.SelectedIndex = 5; // default 30 minutes
 
         // Session codes dropdown with descriptions
         var sessionCodeItems = new List<SessionCodeItem>
@@ -94,15 +122,43 @@ public partial class AddSessionWindow : Window
             return;
         }
 
+        if (SessionTimeComboBox.SelectedItem is not SessionTimeItem selectedTime)
+        {
+            MessageBox.Show("Please select a valid time.", "Error");
+            return;
+        }
+
         SelectedStudent = student;
         SelectedDate = SessionDatePicker.SelectedDate.Value;
         Minutes = minutes;
         SessionCode = ((SessionCodeItem)SessionCodeComboBox.SelectedItem).Code;
+        SessionTime = selectedTime.Time;
 
         // Validate that the selected date is within the IEP date range
         if (SelectedDate < _iepStartDate || SelectedDate > _iepEndDate)
         {
             MessageBox.Show($"The selected date ({SelectedDate:MM/dd/yyyy}) is outside the current IEP date range ({_iepStartDate:MM/dd/yyyy} to {_iepEndDate:MM/dd/yyyy}).\n\nPlease select a date within the IEP period.", "Date Outside IEP Range", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        // Check for overlapping sessions across all students on the selected date
+        var newStart = selectedTime.Time;
+        var newEnd = newStart.Add(TimeSpan.FromMinutes(minutes));
+        var conflict = _allStudents
+            .SelectMany(s => s.Sessions
+                .Where(sess => sess.Date.Date == SelectedDate.Date)
+                .Select(sess => new { Student = s, Session = sess }))
+            .FirstOrDefault(x =>
+            {
+                var existingEnd = x.Session.TimeOfDay.Add(TimeSpan.FromMinutes(x.Session.Minutes));
+                return newStart < existingEnd && newEnd > x.Session.TimeOfDay;
+            });
+        if (conflict != null)
+        {
+            MessageBox.Show(
+                $"This time conflicts with an existing session for {conflict.Student.Name}:\n" +
+                $"{DateTime.Today.Add(conflict.Session.TimeOfDay):hh:mm tt} - {conflict.Session.Minutes} min ({conflict.Session.Code})",
+                "Session Conflict", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 

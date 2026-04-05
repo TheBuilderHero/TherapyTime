@@ -12,18 +12,14 @@ public partial class MakeupSessionSelectorWindow : Window
     {
         InitializeComponent();
 
-        var linkedDatesByOthers = student.Sessions
-            .Where(s => s.Code == SessionCode.MU && s.LinkedSessionDate.HasValue)
-            .Select(s => s.LinkedSessionDate!.Value)
+        var linkedNmSessionIdsByOthers = student.Sessions
+            .Where(s => s.Code == SessionCode.MU && !string.IsNullOrWhiteSpace(s.LinkedSessionId) && s.Id != currentMuSession?.SessionId)
+            .Select(s => s.LinkedSessionId!)
             .ToHashSet();
 
-        if (currentMuSession?.LinkedSessionDate.HasValue == true)
-        {
-            linkedDatesByOthers.Remove(currentMuSession.LinkedSessionDate.Value);
-        }
-
         var nmSessions = student.Sessions
-            .Where(s => s.Code == SessionCode.NM && !linkedDatesByOthers.Contains(s.Date))
+            .Where(s => s.Code == SessionCode.NM && !linkedNmSessionIdsByOthers.Contains(s.Id))
+            .OrderBy(s => s.SessionDateTime)
             .ToList();
 
         SessionsList.ItemsSource = nmSessions;

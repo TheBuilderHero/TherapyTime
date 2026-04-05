@@ -6,12 +6,37 @@ using System.Text.Json.Serialization;
 namespace TherapyTime;
 
 /// <summary>
+/// Holds core student data that persists across IEP date ranges
+/// </summary>
+public class StudentCoreData
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public bool IsArchived { get; set; } = false;
+    public int MonthlyRequiredMinutes { get; set; } = 120;
+    public List<DateTime> PastAnnualReviews { get; set; } = new List<DateTime>();
+    public List<DateTime> FutureAnnualReviews { get; set; } = new List<DateTime>();
+    public DateTime? NextThreeYearReevaluation { get; set; }
+}
+
+/// <summary>
+/// Holds IEP-specific data for a student
+/// </summary>
+public class StudentIepData
+{
+    public string Id { get; set; } = string.Empty;
+    public List<Session> Sessions { get; set; } = new List<Session>();
+    public int TotalMinutesReceived { get; set; } = 0;
+    public int TotalMinutesRequired { get; set; } = 120;
+}
+
+/// <summary>
 /// Manages a list of students and JSON persistence
 /// </summary>
 public static class StudentManager
 {
     /// <summary>
-    /// Load students from JSON string
+    /// Load students from JSON string (legacy full format)
     /// </summary>
     public static List<Student> LoadFromJson(string json)
     {
@@ -26,10 +51,114 @@ public static class StudentManager
     }
 
     /// <summary>
-    /// Save students to JSON string
+    /// Save students to JSON string (legacy full format)
     /// </summary>
     public static string SaveToJson(List<Student> students) =>
         JsonSerializer.Serialize(students, new JsonSerializerOptions { WriteIndented = true });
+
+    /// <summary>
+    /// Extract and save core student data to JSON
+    /// </summary>
+    public static string SaveCoreDataToJson(List<Student> students)
+    {
+        var coreData = students.Select(s => new StudentCoreData
+        {
+            Id = s.Id,
+            Name = s.Name,
+            IsArchived = s.IsArchived,
+            MonthlyRequiredMinutes = s.MonthlyRequiredMinutes,
+            PastAnnualReviews = s.PastAnnualReviews,
+            FutureAnnualReviews = s.FutureAnnualReviews,
+            NextThreeYearReevaluation = s.NextThreeYearReevaluation
+        }).ToList();
+
+        return JsonSerializer.Serialize(coreData, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    /// <summary>
+    /// Extract and save IEP-specific data to JSON
+    /// </summary>
+    public static string SaveIepDataToJson(List<Student> students)
+    {
+        var iepData = students.Select(s => new StudentIepData
+        {
+            Id = s.Id,
+            Sessions = s.Sessions,
+            TotalMinutesReceived = s.TotalMinutesReceived,
+            TotalMinutesRequired = s.TotalMinutesRequired
+        }).ToList();
+
+        return JsonSerializer.Serialize(iepData, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    /// <summary>
+    /// Load core student data from JSON
+    /// </summary>
+    public static List<StudentCoreData> LoadCoreDataFromJson(string json)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<List<StudentCoreData>>(json) ?? new List<StudentCoreData>();
+        }
+        catch
+        {
+            return new List<StudentCoreData>();
+        }
+    }
+
+    /// <summary>
+    /// Load IEP-specific data from JSON
+    /// </summary>
+    public static List<StudentIepData> LoadIepDataFromJson(string json)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<List<StudentIepData>>(json) ?? new List<StudentIepData>();
+        }
+        catch
+        {
+            return new List<StudentIepData>();
+        }
+    }
+
+    /// <summary>
+    /// Merge core student data with IEP-specific data
+    /// </summary>
+    public static List<Student> MergeStudentData(List<StudentCoreData> coreData, List<StudentIepData> iepData)
+    {
+        var result = new List<Student>();
+
+        // Create students from core data
+        foreach (var core in coreData)
+        {
+            var student = new Student
+            {
+                Id = core.Id,
+                Name = core.Name,
+                IsArchived = core.IsArchived,
+                MonthlyRequiredMinutes = core.MonthlyRequiredMinutes,
+                PastAnnualReviews = core.PastAnnualReviews,
+                FutureAnnualReviews = core.FutureAnnualReviews,
+                NextThreeYearReevaluation = core.NextThreeYearReevaluation,
+                Sessions = new List<Session>(),
+                TotalMinutesReceived = 0,
+                TotalMinutesRequired = core.MonthlyRequiredMinutes
+            };
+
+            // Overlay IEP-specific data
+            var iepInfo = iepData.FirstOrDefault(i => i.Id == student.Id);
+            if (iepInfo != null)
+            {
+                student.Sessions = iepInfo.Sessions;
+                student.TotalMinutesReceived = iepInfo.TotalMinutesReceived;
+                student.TotalMinutesRequired = iepInfo.TotalMinutesRequired;
+            }
+
+            result.Add(student);
+        }
+
+        return result;
+    }
 
     /// <summary>
     /// Get students who have a session on a specific date
@@ -50,6 +179,9 @@ public static class StudentManager
 
         // Student name
         public string Name { get; set; } = string.Empty;
+
+        // Hidden from session creation lists when archived
+        public bool IsArchived { get; set; } = false;
 
         // IEP therapy requirements
         public int MonthlyRequiredMinutes { get; set; } = 120;
@@ -100,17 +232,18 @@ public static class StudentManager
         /// <summary>
         /// Add a therapy session
         /// </summary>
-        public void ScheduleSession(DateTime date, int minutes = 60, SessionCode code = SessionCode.IC)
+        public Session ScheduleSession(DateTime date, int minutes = 60, SessionCode code = SessionCode.IC, TimeSpan? timeOfDay = null)
         {
-            //Prevent duplicates.
-            if (Sessions.Any(s => s.Date == date))
-                throw new InvalidOperationException("Session already exists for this date.");
-
-            
-            Sessions.Add(new Session(date, minutes, code));
+            var session = new Session(date, minutes, code, timeOfDay);
+            Sessions.Add(session);
 
             // Keep sessions sorted by date
-            Sessions = Sessions.OrderBy(s => s.Date).ToList();
+            Sessions = Sessions
+                .OrderBy(s => s.SessionDateTime)
+                .ThenBy(s => s.Id)
+                .ToList();
+
+            return session;
         }
 
         /// <summary>

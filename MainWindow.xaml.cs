@@ -160,12 +160,13 @@ public partial class MainWindow : Window
             var student = addSessionWindow.SelectedStudent!;
             var date = addSessionWindow.SelectedDate;
             int minutes = addSessionWindow.Minutes;
+            SessionCode sessionCode = addSessionWindow.SessionCode;
 
             if (!student.HasSessionOn(date))
             {
-                student.ScheduleSession(date, minutes);
+                student.ScheduleSession(date, minutes, sessionCode);
                 SaveStudents();
-                MessageBox.Show($"Session added for {student.Name} on {date:MM/dd/yyyy} ({minutes} minutes).", "Info");
+                MessageBox.Show($"Session added for {student.Name} on {date:MM/dd/yyyy} ({minutes} minutes, code: {sessionCode}).", "Info");
             }
             else
             {

@@ -100,14 +100,14 @@ public static class StudentManager
         /// <summary>
         /// Add a therapy session
         /// </summary>
-        public void ScheduleSession(DateTime date, int minutes = 60)
+        public void ScheduleSession(DateTime date, int minutes = 60, SessionCode code = SessionCode.IC)
         {
             //Prevent duplicates.
             if (Sessions.Any(s => s.Date == date))
                 throw new InvalidOperationException("Session already exists for this date.");
 
             
-            Sessions.Add(new Session(date, minutes, SessionCode.IC));
+            Sessions.Add(new Session(date, minutes, code));
 
             // Keep sessions sorted by date
             Sessions = Sessions.OrderBy(s => s.Date).ToList();

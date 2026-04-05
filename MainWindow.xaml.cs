@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     private DateTime _endDate;
     private string _studentFilePath = string.Empty;
     private List<Student> _allStudents = new List<Student>();
+    private DateTime? _lastSessionAddDate = null; // tracks the last date used for adding sessions
     public MainWindow()
     {
         InitializeComponent();
@@ -150,7 +151,9 @@ public partial class MainWindow : Window
         }
 
         // Open AddSessionWindow with all students in dropdown
-        AddSessionWindow addSessionWindow = new AddSessionWindow(_allStudents)
+        // Use last session add date if available, otherwise use today
+        DateTime defaultDate = _lastSessionAddDate ?? DateTime.Today;
+        AddSessionWindow addSessionWindow = new AddSessionWindow(_allStudents, _startDate, _endDate, defaultDate, false)
         {
             Owner = this
         };
@@ -167,6 +170,9 @@ public partial class MainWindow : Window
                 student.ScheduleSession(date, minutes, sessionCode);
                 SaveStudents();
                 MessageBox.Show($"Session added for {student.Name} on {date:MM/dd/yyyy} ({minutes} minutes, code: {sessionCode}).", "Info");
+                
+                // Update the last session add date for future additions
+                _lastSessionAddDate = date;
             }
             else
             {
@@ -323,7 +329,7 @@ public partial class MainWindow : Window
 
             try
             {
-                EditDaySessionsWindow editWindow = new EditDaySessionsWindow(_allStudents, day)
+                EditDaySessionsWindow editWindow = new EditDaySessionsWindow(_allStudents, day, _startDate, _endDate)
                 {
                     Owner = this
                 };

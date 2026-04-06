@@ -1,0 +1,99 @@
+TherapyTime Release Notes and MSIX Packaging Runbook
+
+Use this checklist every time you are ready to release a new installer.
+
+------------------------------------------------------------
+1) Prerequisites (one-time machine setup)
+------------------------------------------------------------
+1. .NET SDK installed (dotnet command works).
+2. Windows SDK installed with:
+	 - makeappx.exe
+	 - signtool.exe
+3. Project contains:
+	 - icon.png
+	 - Package.appxmanifest
+	 - TherapyTime.csproj ItemGroup includes PackageIcon and PackageManifest.
+
+Useful checks:
+dotnet --info
+"C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\makeappx.exe" /?
+"C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe" /?
+
+------------------------------------------------------------
+2) Make code changes and verify before release
+------------------------------------------------------------
+1. Make your code/file changes.
+2. Build and fix errors:
+dotnet clean
+dotnet build
+
+Optional quick smoke test:
+dotnet run
+
+------------------------------------------------------------
+3) Bump release version (required)
+------------------------------------------------------------
+MSIX upgrades require a higher package version each release.
+
+Update TherapyTime.csproj (recommended to keep this as source of truth):
+<PropertyGroup>
+	<Version>1.0.0.1</Version>
+</PropertyGroup>
+
+Update Package.appxmanifest Identity version to match:
+<Identity Name="TherapyTime" Publisher="CN=TherapyTime" Version="1.0.0.1" />
+
+Rules:
+- Version format: Major.Minor.Build.Revision
+- Example progression: 1.0.0.0 -> 1.0.0.1 -> 1.0.0.2
+- New installer must have strictly higher version to install as an update.
+
+------------------------------------------------------------
+4) Recommended one-command release packaging (auto version)
+------------------------------------------------------------
+This command:
+- reads version from TherapyTime.csproj,
+- publishes Release self-contained win-x64,
+- stages files,
+- packs .msix with MakeAppx,
+- creates dev certificate,
+- signs and verifies package.
+
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; Set-Location 'c:\Users\KotaH\Documents\C# Projects\TherapyTime'; [xml]$proj=Get-Content 'TherapyTime.csproj'; $ver=$null; foreach ($pg in $proj.Project.PropertyGroup) { if (-not $ver -and $pg.Version) { $ver=$pg.Version }; if (-not $ver -and $pg.VersionPrefix) { $ver=$pg.VersionPrefix }; if (-not $ver -and $pg.AssemblyVersion) { $ver=$pg.AssemblyVersion } }; if (-not $ver) { $ver='1.0.0.0' }; if ($ver -notmatch '^\d+\.\d+\.\d+(\.\d+)?$') { $ver = ($ver -replace '[^0-9\.]',''); if ($ver -notmatch '^\d+\.\d+\.\d+(\.\d+)?$') { $ver='1.0.0.0' } }; if ($ver -match '^\d+\.\d+\.\d+$') { $ver = \"$ver.0\" }; $publishDir='bin\Release\net10.0-windows\win-x64\publish'; $stageDir='temp_build\msix_staging'; $msixPath=\"temp_build\TherapyTime_${ver}_x64.msix\"; $pfxPath='temp_build\TherapyTimeDevCert.pfx'; $cerPath='temp_build\TherapyTimeDevCert.cer'; $pwd='TherapyTimeDev123!'; dotnet publish -c Release -r win-x64 --self-contained true; if (Test-Path $stageDir) { Remove-Item $stageDir -Recurse -Force }; New-Item -ItemType Directory -Path $stageDir | Out-Null; Copy-Item \"$publishDir\*\" $stageDir -Recurse -Force; Copy-Item 'Package.appxmanifest' \"$stageDir\AppxManifest.xml\" -Force; Copy-Item 'icon.png' \"$stageDir\icon.png\" -Force; & 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\makeappx.exe' pack /d $stageDir /p $msixPath /o; $securePwd=ConvertTo-SecureString -String $pwd -AsPlainText -Force; $cert=New-SelfSignedCertificate -Type Custom -Subject 'CN=TherapyTime' -KeyUsage DigitalSignature -FriendlyName 'TherapyTime Dev Cert' -CertStoreLocation 'Cert:\CurrentUser\My' -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3'); Export-Certificate -Cert $cert -FilePath $cerPath -Force | Out-Null; Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $securePwd -Force | Out-Null; Import-Certificate -FilePath $cerPath -CertStoreLocation 'Cert:\CurrentUser\Root' | Out-Null; Import-Certificate -FilePath $cerPath -CertStoreLocation 'Cert:\CurrentUser\TrustedPeople' | Out-Null; & 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe' sign /fd SHA256 /f $pfxPath /p $pwd $msixPath; & 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe' verify /pa $msixPath; Write-Host ''; Write-Host 'MSIX ready:' (Resolve-Path $msixPath)"
+
+Expected output files:
+- temp_build\TherapyTime_<version>_x64.msix
+- temp_build\TherapyTimeDevCert.pfx
+- temp_build\TherapyTimeDevCert.cer
+
+------------------------------------------------------------
+5) Optional: create a .msixbundle (if needed)
+------------------------------------------------------------
+If msixtool is installed and working in your environment:
+msixtool bundle "temp_build" "temp_build\TherapyTime_<version>_x64.msixbundle" "temp_build\TherapyTimeDevCert.pfx" "SHA256"
+
+Note:
+- msixtool bundles existing .msix packages; it does not replace MakeAppx packaging step.
+
+------------------------------------------------------------
+6) Install/test release artifact
+------------------------------------------------------------
+1. Install generated .msix.
+2. Confirm app launches.
+3. Confirm data path and major workflows.
+4. Confirm upgrade path from previous version works.
+
+If install shows cert trust error (0x800B010A):
+- Ensure you are installing the newly signed package.
+- Ensure TherapyTimeDevCert.cer is trusted in:
+	- CurrentUser\Root
+	- CurrentUser\TrustedPeople
+
+------------------------------------------------------------
+7) Release checklist before sharing installer
+------------------------------------------------------------
+1. Version bumped in both csproj and appxmanifest.
+2. dotnet build passes.
+3. Packaging command completes with signature verification success.
+4. Installer filename matches expected version.
+5. Smoke test done on clean machine or test profile.

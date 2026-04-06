@@ -8,4 +8,9 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageIcon Include="icon.png" />
+    <PackageManifest Include="Package.appxmanifest" />
+  </ItemGroup>
+
 </Project>

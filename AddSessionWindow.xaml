@@ -4,6 +4,7 @@
         Title="Add Session" Height="340" Width="420" MinHeight="340" WindowStartupLocation="CenterOwner">
     <Grid Margin="10">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Help -->
             <RowDefinition Height="Auto"/> <!-- Student -->
             <RowDefinition Height="Auto"/> <!-- Date -->
             <RowDefinition Height="Auto"/> <!-- Time -->
@@ -16,28 +17,34 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
+        <Button Grid.Row="0" Grid.Column="1" Content="?" Width="28" Height="28"
+            HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,5,0"
+            Click="HelpBubble_Click"
+            ToolTip="Show help for this window"
+            FontWeight="Bold" Background="#FEF3C7" BorderBrush="#D97706" Foreground="#92400E"/>
+
         <!-- Student -->
-        <Label Grid.Row="0" Grid.Column="0" Content="Student:" VerticalAlignment="Center"/>
-        <ComboBox Grid.Row="0" Grid.Column="1" x:Name="StudentComboBox" Margin="5"/>
+        <Label Grid.Row="1" Grid.Column="0" Content="Student:" VerticalAlignment="Center"/>
+        <ComboBox Grid.Row="1" Grid.Column="1" x:Name="StudentComboBox" Margin="5"/>
 
         <!-- Date -->
-        <Label Grid.Row="1" Grid.Column="0" Content="Date:" VerticalAlignment="Center"/>
-        <DatePicker Grid.Row="1" Grid.Column="1" x:Name="SessionDatePicker" Margin="5"/>
+        <Label Grid.Row="2" Grid.Column="0" Content="Date:" VerticalAlignment="Center"/>
+        <DatePicker Grid.Row="2" Grid.Column="1" x:Name="SessionDatePicker" Margin="5"/>
 
         <!-- Time -->
-        <Label Grid.Row="2" Grid.Column="0" Content="Time:" VerticalAlignment="Center"/>
-        <ComboBox Grid.Row="2" Grid.Column="1" x:Name="SessionTimeComboBox" Margin="5"/>
+        <Label Grid.Row="3" Grid.Column="0" Content="Time:" VerticalAlignment="Center"/>
+        <ComboBox Grid.Row="3" Grid.Column="1" x:Name="SessionTimeComboBox" Margin="5"/>
 
         <!-- Minutes -->
-        <Label Grid.Row="3" Grid.Column="0" Content="Minutes:" VerticalAlignment="Center"/>
-        <ComboBox Grid.Row="3" Grid.Column="1" x:Name="MinutesComboBox" Margin="5"/>
+        <Label Grid.Row="4" Grid.Column="0" Content="Minutes:" VerticalAlignment="Center"/>
+        <ComboBox Grid.Row="4" Grid.Column="1" x:Name="MinutesComboBox" Margin="5"/>
 
         <!-- Session Code -->
-        <Label Grid.Row="4" Grid.Column="0" Content="Session Code:" VerticalAlignment="Center"/>
-        <ComboBox Grid.Row="4" Grid.Column="1" x:Name="SessionCodeComboBox" Margin="5"/>
+        <Label Grid.Row="5" Grid.Column="0" Content="Session Code:" VerticalAlignment="Center"/>
+        <ComboBox Grid.Row="5" Grid.Column="1" x:Name="SessionCodeComboBox" Margin="5"/>
 
         <!-- Buttons -->
-        <StackPanel Grid.Row="5" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+        <StackPanel Grid.Row="6" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
             <Button Content="Add" Width="80" Margin="5" Click="Add_Click"/>
             <Button Content="Cancel" Width="80" Margin="5" Click="Cancel_Click"/>
         </StackPanel>

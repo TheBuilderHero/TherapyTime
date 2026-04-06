@@ -19,6 +19,24 @@ public partial class StatisticsWindow : Window
         StudentStatsItemsControl.ItemsSource = viewModels;
     }
 
+    private void HelpBubble_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(
+            "Student Minutes and Sessions Help\n\n" +
+            "Purpose:\n" +
+            "- Show per-student minute totals and session details for the current IEP.\n\n" +
+            "How to use this window:\n" +
+            "- Expand a student card to view individual sessions.\n" +
+            "- Review Completed, Scheduled, Excused, Remaining, and Therapy Balance values.\n\n" +
+            "What colors mean:\n" +
+            "- Green: at or above required threshold.\n" +
+            "- Amber: scheduled to meet target but not fully completed yet.\n" +
+            "- Red: below required trajectory.",
+            "Statistics Help",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
     private static StudentStatisticsViewModel BuildStudentStatistics(Student student, DateTime iepStartDate, DateTime iepEndDate)
     {
         var sessions = student.Sessions

@@ -71,4 +71,20 @@ public partial class DayView : Window
             }
         }
     }
+
+    private void HelpBubble_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(
+            "Day View Help\n\n" +
+            "Purpose:\n" +
+            "- Legacy day-level summary of students with sessions on the selected date.\n\n" +
+            "How to use this window:\n" +
+            "- Review minutes and reevaluation info in the grid.\n" +
+            "- Use Meeting Complete to mark a listed session as complete.\n\n" +
+            "Note:\n" +
+            "- Main day editing and validation workflows are handled in the Edit Day Sessions window.",
+            "Day View Help",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
 }

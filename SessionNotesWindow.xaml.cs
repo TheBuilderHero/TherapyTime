@@ -51,6 +51,22 @@ public partial class SessionNotesWindow : Window, INotifyPropertyChanged
         DialogResult = false;
     }
 
+    private void HelpBubble_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(
+            "Session Notes Help\n\n" +
+            "Purpose:\n" +
+            "- Add or review notes tied to a specific session.\n\n" +
+            "How to use this window:\n" +
+            "- Enter notes and click Save when editing is allowed.\n" +
+            "- Click Close to exit without changing notes.\n\n" +
+            "What read-only means:\n" +
+            "- Completed sessions may open notes in read-only mode to preserve finalized records.",
+            "Session Notes Help",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
     protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

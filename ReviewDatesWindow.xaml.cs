@@ -18,6 +18,22 @@ public partial class ReviewDatesWindow : Window
             .Select(student => new ReviewDatesViewModel(student, today, reminderEnd))
             .ToList();
     }
+
+    private void HelpBubble_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(
+            "Review and Reevaluation Dates Help\n\n" +
+            "Purpose:\n" +
+            "- Show annual review and reevaluation compliance dates for all students in one place.\n\n" +
+            "How to use this window:\n" +
+            "- Review rows sorted by student name.\n" +
+            "- Check Past Annual Reviews, Future Annual Reviews, and 3-Year Reevaluation columns.\n\n" +
+            "What highlight means:\n" +
+            "- Bold yellow text marks dates within the next 30 days from today.",
+            "Review Dates Help",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
 }
 
 public class ReviewDatesViewModel

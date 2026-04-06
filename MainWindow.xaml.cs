@@ -2,6 +2,7 @@
 using Microsoft.Win32; // for OpenFileDialog / SaveFileDialog
 using System.Drawing;
 using System.Text;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -601,6 +602,50 @@ public partial class MainWindow : Window
     private void About_Click(object sender, RoutedEventArgs e)
     {
         MessageBox.Show("TherapyTime v1.0", "About");
+    }
+
+    private void HelpBubble_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(
+            "Main Calendar Help\n\n" +
+            "Purpose:\n" +
+            "- Central workspace for IEP scheduling, editing, and statistics.\n\n" +
+            "How to use this window:\n" +
+            "- Use the Student menu to add students, sessions, and manage required minutes.\n" +
+            "- Click any day button to edit sessions for that date.\n" +
+            "- Use Statistics for progress and review-date reporting.\n\n" +
+            "What day indicators mean:\n" +
+            "- Green border: all sessions completed for that day.\n" +
+            "- Amber border: mixed completion status.\n" +
+            "- Red border: none completed.\n" +
+            "- Day count in parentheses: number of sessions scheduled that day.",
+            "Main Window Help",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
+    private void Documentation_Click(object sender, RoutedEventArgs e)
+    {
+        const string documentationUrl = "https://github.com/TheBuilderHero/TherapyTime/blob/master/README";
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = documentationUrl,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                "Unable to open documentation link.\n\n" +
+                documentationUrl + "\n\n" +
+                "Error: " + ex.Message,
+                "Open Documentation Failed",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
     }
 
     private void ShowStudentStatistics_Click(object sender, RoutedEventArgs e)

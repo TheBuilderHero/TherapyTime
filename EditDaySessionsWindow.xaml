@@ -24,6 +24,19 @@
         </Window.Resources>
     <DockPanel Margin="10">
 
+        <Button Content="?"
+            Width="28"
+            Height="28"
+            DockPanel.Dock="Top"
+            HorizontalAlignment="Right"
+            Margin="0,0,0,8"
+            Click="HelpBubble_Click"
+            ToolTip="Show help for this window"
+            FontWeight="Bold"
+            Background="#FEF3C7"
+            BorderBrush="#D97706"
+            Foreground="#92400E"/>
+
         <DataGrid x:Name="SessionsGrid"
                   AutoGenerateColumns="False"
                   CanUserAddRows="False"

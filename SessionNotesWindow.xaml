@@ -7,19 +7,26 @@
 
     <Grid Margin="10">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <Button Grid.Row="0" Content="?" Width="28" Height="28"
+                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,0,6"
+                Click="HelpBubble_Click"
+                ToolTip="Show help for this window"
+                FontWeight="Bold" Background="#FEF3C7" BorderBrush="#D97706" Foreground="#92400E"/>
+
         <TextBox x:Name="NotesTextBox"
-                 Grid.Row="0"
+                 Grid.Row="1"
                  TextWrapping="Wrap"
                  AcceptsReturn="True"
                  VerticalScrollBarVisibility="Auto"
                  Margin="0,0,0,10"
                  IsReadOnly="{Binding IsReadOnly}"/>
 
-        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Save" Width="80" Height="30" Margin="0,0,10,0" Click="Save_Click" Visibility="{Binding SaveButtonVisibility}"/>
             <Button Content="Close" Width="80" Height="30" Click="Close_Click"/>
         </StackPanel>

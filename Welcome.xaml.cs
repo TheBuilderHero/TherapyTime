@@ -253,4 +253,21 @@ public partial class Welcome : Window
     {
         _startDate = startDate;
     }
+
+    private void HelpBubble_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(
+            "Welcome Window Help\n\n" +
+            "Purpose:\n" +
+            "- Start a new IEP date range or open an existing IEP file.\n\n" +
+            "How to use this window:\n" +
+            "- Create New IEP: pick start/end dates, then click Create.\n" +
+            "- Open Existing IEP: switch to Open Existing IEP, select a file, then click Open (or double-click).\n\n" +
+            "What it means:\n" +
+            "- The file name is generated from the date range (yyyy-MM-dd_yyyy-MM-dd.json).\n" +
+            "- Overlap warnings appear if the new range intersects an existing IEP range.",
+            "Welcome Help",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
 }

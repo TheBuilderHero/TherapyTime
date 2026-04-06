@@ -35,4 +35,20 @@ public partial class MakeupSessionSelectorWindow : Window
     {
         DialogResult = false;
     }
+
+    private void HelpBubble_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(
+            "Makeup Session Selector Help\n\n" +
+            "Purpose:\n" +
+            "- Link an MU (makeup) session to an eligible NM (needs makeup) session.\n\n" +
+            "How to use this window:\n" +
+            "- Select one NM session from the list and click OK.\n" +
+            "- Click Cancel to close without linking.\n\n" +
+            "What list behavior means:\n" +
+            "- Already-linked NM sessions are filtered out to prevent duplicate MU links.",
+            "Makeup Selector Help",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
 }

@@ -5,7 +5,17 @@
         Background="#F5F7FA">
 
     <Grid>
-        <Border Background="White"
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Button Grid.Row="0" Content="?" Width="28" Height="28"
+                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10,10,10,6"
+                Click="HelpBubble_Click"
+                ToolTip="Show help for this window"
+                FontWeight="Bold" Background="#FEF3C7" BorderBrush="#D97706" Foreground="#92400E"/>
+        <Border Grid.Row="1" Background="White"
                 CornerRadius="10"
                 Padding="30"
                 Width="450"

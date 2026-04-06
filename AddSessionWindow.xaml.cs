@@ -169,4 +169,22 @@ public partial class AddSessionWindow : Window
     {
         DialogResult = false;
     }
+
+    private void HelpBubble_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(
+            "Add Session Help\n\n" +
+            "Purpose:\n" +
+            "- Create a new therapy session for a selected student and date/time.\n\n" +
+            "How to use this window:\n" +
+            "1. Select Student, Date, Time, Minutes, and Session Code.\n" +
+            "2. Click Add to create the session.\n\n" +
+            "What validation means:\n" +
+            "- Date must be inside the active IEP range.\n" +
+            "- Session time cannot overlap any other session on the same date across all students.\n" +
+            "- Session codes define whether the session is completed, missed, makeup, or excused.",
+            "Add Session Help",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
 }

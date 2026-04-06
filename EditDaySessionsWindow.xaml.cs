@@ -692,5 +692,28 @@ public partial class EditDaySessionsWindow : Window
             student.Sessions = student.Sessions.OrderBy(s => s.SessionDateTime).ThenBy(s => s.Id).ToList();
         }
     }
+
+    private void HelpBubble_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(
+            "Edit Day Sessions Help\n\n" +
+            "Purpose:\n" +
+            "- Manage all sessions scheduled for one specific date.\n\n" +
+            "How to use this window:\n" +
+            "- Edit time, minutes, and code directly in the grid.\n" +
+            "- Use Complete Session/Change to toggle completion.\n" +
+            "- Use Notes to add or view notes.\n" +
+            "- Use Add Session for another session on this day.\n\n" +
+            "Save options:\n" +
+            "- Save Sessions: saves and keeps this window open.\n" +
+            "- Save and Exit: saves and closes.\n" +
+            "- Cancel Changes: closes without saving edits made in this window.\n\n" +
+            "What rules mean:\n" +
+            "- Time overlaps are blocked for the day across all students.\n" +
+            "- MU sessions can be linked to NM sessions.",
+            "Edit Day Sessions Help",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
 }
 

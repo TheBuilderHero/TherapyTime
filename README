@@ -1,1 +1,274 @@
-The purpose of this application is to track IEP minutes for Therapy minutes.
+# TherapyTime End-User Documentation
+
+TherapyTime is a desktop application used to manage student therapy sessions during an IEP period. It helps you:
+
+- track planned and completed sessions,
+- monitor required versus completed minutes,
+- manage student review and reevaluation dates,
+- view day-by-day and student-by-student statistics.
+
+## 1. Getting Started
+
+When the app opens:
+
+1. You are prompted to create/open an IEP date range from the Welcome screen.
+2. The main calendar view loads for that IEP.
+3. A reminder popup appears for upcoming Annual Reviews and 3-Year Reevaluations in the next 30 days.
+
+### Data Storage
+
+TherapyTime stores data in two logical places:
+
+- Core student data (name, archive status, monthly required minutes, review dates)
+- IEP-specific data (sessions and IEP required/received totals)
+
+This allows student identity and long-term dates to persist across multiple IEP files.
+
+## 2. Main Navigation
+
+The top menu contains:
+
+- File
+- Student
+- Statistics
+- Help
+
+### File Menu
+
+- New/Open IEP: Create a new IEP period or open an existing IEP file.
+- Save IEP: Save all current changes.
+- Exit: Close the application.
+
+### Student Menu
+
+- Add Session
+- New Student
+- Update Required Minutes
+- Archive Student
+- Unarchive Student
+- Delete Student
+
+### Statistics Menu
+
+- Student Minutes and Sessions (Current IEP)
+- Daily View (Current IEP)
+- Review and Reevaluation Dates
+
+### Help Menu
+
+- Documentation: Opens the GitHub README in your browser.
+- About: Shows app version information.
+
+## 2.1 In-Window Help Bubbles
+
+Every window now includes a `?` help bubble in the top area.
+
+- Click the `?` button in any window to open contextual guidance.
+- Each help bubble explains:
+	- the purpose of that window,
+	- what key controls are for,
+	- how to complete common tasks,
+	- what important statuses/colors/rules mean.
+
+Window-by-window help coverage:
+
+- Welcome: creating new IEPs vs opening existing IEPs, date range and overlap behavior.
+- Main Calendar: menu usage, day-button meaning, and completion color indicators.
+- Add Student: required vs optional fields and how review/reevaluation dates are used.
+- Add Session: field meanings, IEP range checks, and overlap checks.
+- Edit Day Sessions: grid actions, completion workflow, MU/NM linking, and save options.
+- Session Notes: editable vs read-only notes behavior.
+- Makeup Session Selector: how to choose an NM session for MU linking.
+- Student Minutes and Sessions: metric meanings and status color interpretation.
+- Daily View: week navigation and day-cell color meaning.
+- Review and Reevaluation Dates: highlighted 30-day compliance dates.
+- Day View (legacy): purpose and relationship to the current day-edit workflow.
+
+## 3. Calendar View and Day Buttons
+
+The calendar displays each day in the active IEP range.
+
+- A day without sessions shows only the day number.
+- A day with sessions shows day number + session count.
+- Border colors summarize completion:
+	- Green: all sessions completed
+	- Amber: mixed completion
+	- Red: no sessions completed
+
+Click any day to open the day editor for session management.
+
+## 4. Student Management
+
+### 4.1 Add a New Student
+
+Open Student -> New Student.
+
+Required fields:
+
+- Student Name
+- Required Minutes
+- Future Annual Review date
+- Next 3-Year Reevaluation date
+
+Optional field:
+
+- Past Annual Review date
+
+After saving, the student is immediately available for scheduling.
+
+### 4.2 Update Required Minutes
+
+Open Student -> Update Required Minutes and choose a student.
+
+This updates the student's required minutes target used in current statistics and balancing.
+
+### 4.3 Archive / Unarchive Student
+
+- Archive removes the student from Add Session lists while keeping historical data.
+- Unarchive makes the student active again.
+
+### 4.4 Delete Student
+
+Delete permanently removes the student from the current dataset. If sessions exist in the IEP range, a detailed warning is shown first.
+
+## 5. Session Management
+
+### 5.1 Add Session
+
+Open Student -> Add Session.
+
+You select:
+
+- Student
+- Date
+- Time
+- Minutes
+- Session Code
+
+Validation rules include:
+
+- Date must fall within the IEP range.
+- Session time cannot overlap an existing session on that same day (global conflict check across all students).
+
+### 5.2 Edit Sessions for a Day
+
+Click a day on the calendar to open the day editor.
+
+Capabilities:
+
+- Add and remove sessions for that date.
+- Toggle completion status.
+- Save Sessions (save and stay in window).
+- Save and Exit.
+- Cancel Changes.
+
+### 5.3 Completion and Minute Accounting Rules
+
+Current rule behavior:
+
+- Only `T` and `MU` contribute to received therapy minutes.
+- `R`, `A`, `SU`, `IC`, and `NM` do not add to received minutes.
+- Required minutes are user-controlled and are not automatically reduced by refusal/absence/unavailable codes.
+
+### 5.4 Session Codes
+
+- `IC`: Incomplete / not completed yet
+- `T`: Completed therapy session
+- `NM`: Needs makeup
+- `MU`: Makeup session
+- `R`: Refused
+- `A`: Absent
+- `SU`: Student unavailable
+
+## 6. Statistics Views
+
+### 6.1 Student Minutes and Sessions (Current IEP)
+
+Per-student expandable cards provide:
+
+- Needed minutes
+- Required minutes
+- Completed minutes
+- Scheduled minutes
+- Excused minutes
+- Remaining minutes
+- Therapy balance
+
+Each student card includes a session table with color-coded row status.
+
+### 6.2 Daily View (Current IEP)
+
+Shows a weekly matrix:
+
+- Rows: students
+- Columns: days in the selected week
+- Cell content: session code(s) for that student/day
+
+Color behavior:
+
+- Green: all sessions completed for that day
+- Red: today/past day has one or more incomplete sessions
+- Neutral gray: future day (no completion requirement yet)
+
+Use week navigation arrows to move backward/forward within IEP weeks.
+
+### 6.3 Review and Reevaluation Dates
+
+Lists all students sorted by name with columns for:
+
+- Past Annual Reviews
+- Future Annual Reviews
+- 3-Year Reevaluation
+
+Highlight behavior:
+
+- Any future annual review or reevaluation within the next 30 days is bold and yellow.
+
+## 7. 30-Day Review Reminder Popup
+
+At app load and when opening a new IEP, TherapyTime checks active students for:
+
+- Future Annual Reviews within 30 days
+- 3-Year Reevaluations within 30 days
+
+If matches exist, a reminder popup lists the dates and students.
+
+## 8. Typical Workflow
+
+1. Open or create an IEP range.
+2. Add students with required review/reevaluation dates.
+3. Add sessions from Student -> Add Session.
+4. Click calendar days to update completion status.
+5. Save regularly using File -> Save IEP.
+6. Review progress under Statistics views.
+
+## 9. Troubleshooting
+
+### No students available
+
+- Add at least one student using Student -> New Student.
+
+### Cannot add session on chosen date
+
+- Confirm the date is inside the active IEP range.
+- Check for time overlap with an existing session.
+
+### Session not appearing where expected
+
+- Confirm session date and time.
+- Verify student is not archived.
+- Use the Day editor for that exact date to confirm saved entries.
+
+### Build warning about file lock while developing
+
+If running from Visual Studio/CLI and building while the app is open, the executable may be locked by the running process. Close the app instance and rebuild.
+
+## 10. Documentation Link
+
+In-app documentation shortcut:
+
+- Help -> Documentation
+
+This opens:
+
+- https://github.com/TheBuilderHero/TherapyTime/blob/master/README

@@ -12,10 +12,17 @@
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="#FFFFFF" BorderBrush="#D0D7DE" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
+        <Button Grid.Row="0" Content="?" Width="28" Height="28"
+                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,0,0"
+                Click="HelpBubble_Click"
+                ToolTip="Show help for this window"
+                FontWeight="Bold" Background="#FEF3C7" BorderBrush="#D97706" Foreground="#92400E"/>
+
+        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#D0D7DE" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
             <StackPanel>
                 <TextBlock Text="Student Minutes and Sessions" FontSize="20" FontWeight="Bold" Foreground="#1F2937"/>
                 <TextBlock Text="Current IEP range" FontSize="12" Foreground="#6B7280" Margin="0,4,0,0"/>
@@ -23,7 +30,7 @@
             </StackPanel>
         </Border>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
             <ItemsControl x:Name="StudentStatsItemsControl">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>

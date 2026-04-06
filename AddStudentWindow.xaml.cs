@@ -73,4 +73,25 @@ public partial class AddStudentWindow : Window
     {
         DialogResult = false;
     }
+
+    private void HelpBubble_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(
+            "Add Student Help\n\n" +
+            "Purpose:\n" +
+            "- Add a student with required therapy targets and compliance dates.\n\n" +
+            "Required fields:\n" +
+            "- Student Name\n" +
+            "- Required Minutes\n" +
+            "- Future Annual Review\n" +
+            "- Next 3-Year Reevaluation\n\n" +
+            "Optional field:\n" +
+            "- Past Annual Review\n\n" +
+            "What it means:\n" +
+            "- These dates are used for reminders and reporting in Statistics.\n" +
+            "- Required Minutes becomes the student's IEP minute target.",
+            "Add Student Help",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
 }

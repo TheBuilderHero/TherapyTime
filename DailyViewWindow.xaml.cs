@@ -213,4 +213,23 @@ public partial class DailyViewWindow : Window
         Padding = new Thickness(6, 8, 6, 8),
         Margin = new Thickness(1)
     };
+
+    private void HelpBubble_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(
+            "Daily View Help\n\n" +
+            "Purpose:\n" +
+            "- Weekly student-by-day matrix for fast visual session status checks.\n\n" +
+            "How to use this window:\n" +
+            "- Use Prev Week/Next Week to move through IEP weeks.\n" +
+            "- Read each student row across the week columns.\n\n" +
+            "What cell colors mean:\n" +
+            "- Green: all sessions completed for that student/day.\n" +
+            "- Red: day is today/past and has incomplete session(s).\n" +
+            "- Gray: future date; completion not expected yet.\n" +
+            "- A dash means no sessions for that student/day.",
+            "Daily View Help",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
 }

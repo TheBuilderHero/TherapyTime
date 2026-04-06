@@ -1,99 +1,96 @@
-TherapyTime Release Notes and MSIX Packaging Runbook
+TherapyTime Release Runbook (INNO Setup)
 
-Use this checklist every time you are ready to release a new installer.
+Use this checklist to go from code changes to a releasable INNO installer.
 
 ------------------------------------------------------------
-1) Prerequisites (one-time machine setup)
+1) One-time setup
 ------------------------------------------------------------
-1. .NET SDK installed (dotnet command works).
-2. Windows SDK installed with:
-	 - makeappx.exe
-	 - signtool.exe
-3. Project contains:
-	 - icon.png
-	 - Package.appxmanifest
-	 - TherapyTime.csproj ItemGroup includes PackageIcon and PackageManifest.
+1. Install .NET SDK.
+2. Install Inno Setup 6.x.
+3. Ensure ISCC compiler exists at one of these paths:
+   - C:\Program Files (x86)\Inno Setup 6\ISCC.exe
+   - C:\Program Files\Inno Setup 6\ISCC.exe
 
-Useful checks:
+Quick checks:
 dotnet --info
-"C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\makeappx.exe" /?
-"C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe" /?
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /?
 
 ------------------------------------------------------------
-2) Make code changes and verify before release
+2) Before each release
 ------------------------------------------------------------
-1. Make your code/file changes.
-2. Build and fix errors:
+1. Make code/file changes.
+2. Validate build:
 dotnet clean
-dotnet build
+dotnet build -c Release
 
-Optional quick smoke test:
+Optional local run:
 dotnet run
 
 ------------------------------------------------------------
-3) Bump release version (required)
+3) Versioning
 ------------------------------------------------------------
-MSIX upgrades require a higher package version each release.
+Set version in TherapyTime.csproj so release naming stays consistent.
 
-Update TherapyTime.csproj (recommended to keep this as source of truth):
+Add/update:
 <PropertyGroup>
-	<Version>1.0.0.1</Version>
+  <Version>1.0.0.1</Version>
 </PropertyGroup>
 
-Update Package.appxmanifest Identity version to match:
-<Identity Name="TherapyTime" Publisher="CN=TherapyTime" Version="1.0.0.1" />
-
-Rules:
-- Version format: Major.Minor.Build.Revision
-- Example progression: 1.0.0.0 -> 1.0.0.1 -> 1.0.0.2
-- New installer must have strictly higher version to install as an update.
+Version rules:
+- Use semantic style: Major.Minor.Patch.Revision
+- Increase every public release.
+- Installer.iss reads the version automatically from the published EXE — no manual sync needed.
 
 ------------------------------------------------------------
-4) Recommended one-command release packaging (auto version)
+4) INNO script and build script in repo
 ------------------------------------------------------------
-This command:
-- reads version from TherapyTime.csproj,
-- publishes Release self-contained win-x64,
-- stages files,
-- packs .msix with MakeAppx,
-- creates dev certificate,
-- signs and verifies package.
-
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; Set-Location 'c:\Users\KotaH\Documents\C# Projects\TherapyTime'; [xml]$proj=Get-Content 'TherapyTime.csproj'; $ver=$null; foreach ($pg in $proj.Project.PropertyGroup) { if (-not $ver -and $pg.Version) { $ver=$pg.Version }; if (-not $ver -and $pg.VersionPrefix) { $ver=$pg.VersionPrefix }; if (-not $ver -and $pg.AssemblyVersion) { $ver=$pg.AssemblyVersion } }; if (-not $ver) { $ver='1.0.0.0' }; if ($ver -notmatch '^\d+\.\d+\.\d+(\.\d+)?$') { $ver = ($ver -replace '[^0-9\.]',''); if ($ver -notmatch '^\d+\.\d+\.\d+(\.\d+)?$') { $ver='1.0.0.0' } }; if ($ver -match '^\d+\.\d+\.\d+$') { $ver = \"$ver.0\" }; $publishDir='bin\Release\net10.0-windows\win-x64\publish'; $stageDir='temp_build\msix_staging'; $msixPath=\"temp_build\TherapyTime_${ver}_x64.msix\"; $pfxPath='temp_build\TherapyTimeDevCert.pfx'; $cerPath='temp_build\TherapyTimeDevCert.cer'; $pwd='TherapyTimeDev123!'; dotnet publish -c Release -r win-x64 --self-contained true; if (Test-Path $stageDir) { Remove-Item $stageDir -Recurse -Force }; New-Item -ItemType Directory -Path $stageDir | Out-Null; Copy-Item \"$publishDir\*\" $stageDir -Recurse -Force; Copy-Item 'Package.appxmanifest' \"$stageDir\AppxManifest.xml\" -Force; Copy-Item 'icon.png' \"$stageDir\icon.png\" -Force; & 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\makeappx.exe' pack /d $stageDir /p $msixPath /o; $securePwd=ConvertTo-SecureString -String $pwd -AsPlainText -Force; $cert=New-SelfSignedCertificate -Type Custom -Subject 'CN=TherapyTime' -KeyUsage DigitalSignature -FriendlyName 'TherapyTime Dev Cert' -CertStoreLocation 'Cert:\CurrentUser\My' -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3'); Export-Certificate -Cert $cert -FilePath $cerPath -Force | Out-Null; Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $securePwd -Force | Out-Null; Import-Certificate -FilePath $cerPath -CertStoreLocation 'Cert:\CurrentUser\Root' | Out-Null; Import-Certificate -FilePath $cerPath -CertStoreLocation 'Cert:\CurrentUser\TrustedPeople' | Out-Null; & 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe' sign /fd SHA256 /f $pfxPath /p $pwd $msixPath; & 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe' verify /pa $msixPath; Write-Host ''; Write-Host 'MSIX ready:' (Resolve-Path $msixPath)"
-
-Expected output files:
-- temp_build\TherapyTime_<version>_x64.msix
-- temp_build\TherapyTimeDevCert.pfx
-- temp_build\TherapyTimeDevCert.cer
-
-------------------------------------------------------------
-5) Optional: create a .msixbundle (if needed)
-------------------------------------------------------------
-If msixtool is installed and working in your environment:
-msixtool bundle "temp_build" "temp_build\TherapyTime_<version>_x64.msixbundle" "temp_build\TherapyTimeDevCert.pfx" "SHA256"
+Already included in this repo:
+- Installer.iss
+- build-inno-release.ps1
 
 Note:
-- msixtool bundles existing .msix packages; it does not replace MakeAppx packaging step.
+- Keep AppId stable forever after first release.
+- Version is auto-read from the published EXE; only TherapyTime.csproj needs updating.
 
 ------------------------------------------------------------
-6) Install/test release artifact
+5) Publish app files for installer input
 ------------------------------------------------------------
-1. Install generated .msix.
-2. Confirm app launches.
-3. Confirm data path and major workflows.
-4. Confirm upgrade path from previous version works.
+Command:
+dotnet publish -c Release -r win-x64 --self-contained true
 
-If install shows cert trust error (0x800B010A):
-- Ensure you are installing the newly signed package.
-- Ensure TherapyTimeDevCert.cer is trusted in:
-	- CurrentUser\Root
-	- CurrentUser\TrustedPeople
+Publish output used by INNO:
+bin\Release\net10.0-windows\win-x64\publish
 
 ------------------------------------------------------------
-7) Release checklist before sharing installer
+6) Build installer
 ------------------------------------------------------------
-1. Version bumped in both csproj and appxmanifest.
-2. dotnet build passes.
-3. Packaging command completes with signature verification success.
-4. Installer filename matches expected version.
-5. Smoke test done on clean machine or test profile.
+If ISCC path is known:
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "Installer.iss"
+
+If path varies, auto-detect:
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$iscc=(Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source; if(-not $iscc){$candidates=@('C:\Program Files (x86)\Inno Setup 6\ISCC.exe','C:\Program Files\Inno Setup 6\ISCC.exe'); $iscc=$candidates | Where-Object { Test-Path $_ } | Select-Object -First 1}; if(-not $iscc){throw 'ISCC.exe not found. Install Inno Setup 6.'}; & $iscc 'Installer.iss'"
+
+Expected installer output:
+installer_output\TherapyTime_Setup_<version>_x64.exe
+
+------------------------------------------------------------
+7) One-command full release build (publish + compile INNO)
+------------------------------------------------------------
+Preferred:
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build-inno-release.ps1
+
+Direct compile only (after publish):
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "Installer.iss"
+
+------------------------------------------------------------
+8) Pre-release checklist
+------------------------------------------------------------
+1. dotnet build -c Release passes.
+2. Version updated in TherapyTime.csproj (Installer.iss picks it up automatically).
+3. Installer builds successfully.
+4. Install on a clean test machine/profile.
+5. Confirm app launches and data path behavior is correct.
+
+
+Version updates:
+TherapyTime.csproj <Version>x.x.x.x</Version> inside <PropertyGroup>

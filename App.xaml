@@ -4,6 +4,8 @@
              xmlns:local="clr-namespace:TherapyTime"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <Style TargetType="{x:Type Window}">
+            <Setter Property="Icon" Value="pack://application:,,,/TherapyTime;component/time-tracking.ico"/>
+        </Style>
     </Application.Resources>
 </Application>

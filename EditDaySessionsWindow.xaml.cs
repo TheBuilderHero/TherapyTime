@@ -144,22 +144,18 @@ public partial class EditDaySessionsWindow : Window
             if (IsCompleted)
             {
                 IsCompleted = false;
-                // Undo the action based on Code
+                // Undo tracked therapy minutes for codes that represent delivered therapy.
                 switch (Code)
                 {
                     case SessionCode.T:
-                    case SessionCode.IC:
-                        Student.TotalMinutesReceived -= Minutes;
-                        break;
                     case SessionCode.MU:
                         Student.TotalMinutesReceived -= Minutes;
                         break;
+                    case SessionCode.IC:
+                    case SessionCode.NM:
                     case SessionCode.R:
                     case SessionCode.A:
                     case SessionCode.SU:
-                        Student.TotalMinutesRequired += Minutes;
-                        break;
-                    case SessionCode.NM:
                         // No action for placeholders
                         break;
                 }
@@ -167,22 +163,18 @@ public partial class EditDaySessionsWindow : Window
             else
             {
                 IsCompleted = true;
-                // Perform action based on Code
+                // Track delivered therapy minutes only.
                 switch (Code)
                 {
                     case SessionCode.T:
-                    case SessionCode.IC:
-                        Student.TotalMinutesReceived += Minutes;
-                        break;
                     case SessionCode.MU:
                         Student.TotalMinutesReceived += Minutes;
                         break;
+                    case SessionCode.IC:
+                    case SessionCode.NM:
                     case SessionCode.R:
                     case SessionCode.A:
                     case SessionCode.SU:
-                        Student.TotalMinutesRequired -= Minutes;
-                        break;
-                    case SessionCode.NM:
                         // No action for placeholders
                         break;
                 }
@@ -202,6 +194,7 @@ public partial class EditDaySessionsWindow : Window
     private DateTime _iepEndDate;
     private List<EditableSession> _editableSessions;
     private bool _hasUnsavedChanges = false;
+    private readonly Action _persistChanges;
 
     private class StudentSnapshot
     {
@@ -213,7 +206,7 @@ public partial class EditDaySessionsWindow : Window
 
     private List<StudentSnapshot> _originalStudentSnapshots = new List<StudentSnapshot>();
 
-    public EditDaySessionsWindow(List<Student> students, List<Student> studentsAvailableForAdd, DateTime date, DateTime iepStartDate, DateTime iepEndDate)
+    public EditDaySessionsWindow(List<Student> students, List<Student> studentsAvailableForAdd, DateTime date, DateTime iepStartDate, DateTime iepEndDate, Action persistChanges)
     {
         InitializeComponent();
 
@@ -222,6 +215,7 @@ public partial class EditDaySessionsWindow : Window
         _date = date;
         _iepStartDate = iepStartDate;
         _iepEndDate = iepEndDate;
+        _persistChanges = persistChanges;
 
         // Capture original state so unsaved changes can be discarded
         _originalStudentSnapshots = students.Select(s => new StudentSnapshot
@@ -352,6 +346,7 @@ public partial class EditDaySessionsWindow : Window
             return;
         }
 
+        _persistChanges();
         _hasUnsavedChanges = false;
         CaptureCurrentStateAsOriginal();
         MessageBox.Show("Sessions saved. You can continue editing.", "Saved", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -552,22 +547,18 @@ public partial class EditDaySessionsWindow : Window
                 // If the session was completed, we need to undo the minute adjustments
                 if (row.IsCompleted)
                 {
-                    // Undo the action based on Code
+                    // Undo tracked therapy minutes for codes that represent delivered therapy.
                     switch (row.Code)
                     {
                         case SessionCode.T:
-                        case SessionCode.IC:
-                            row.Student.TotalMinutesReceived -= row.Minutes;
-                            break;
                         case SessionCode.MU:
                             row.Student.TotalMinutesReceived -= row.Minutes;
                             break;
+                        case SessionCode.IC:
+                        case SessionCode.NM:
                         case SessionCode.R:
                         case SessionCode.A:
                         case SessionCode.SU:
-                            row.Student.TotalMinutesRequired += row.Minutes;
-                            break;
-                        case SessionCode.NM:
                             // No action for placeholders
                             break;
                     }

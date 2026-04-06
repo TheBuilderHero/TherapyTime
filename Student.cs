@@ -35,6 +35,11 @@ public class StudentIepData
 /// </summary>
 public static class StudentManager
 {
+    private static readonly JsonSerializerOptions JsonReadOptions = new JsonSerializerOptions
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     /// <summary>
     /// Load students from JSON string (legacy full format)
     /// </summary>
@@ -42,7 +47,7 @@ public static class StudentManager
     {
         try
         {
-            return JsonSerializer.Deserialize<List<Student>>(json) ?? new List<Student>();
+            return JsonSerializer.Deserialize<List<Student>>(json, JsonReadOptions) ?? new List<Student>();
         }
         catch
         {
@@ -98,7 +103,7 @@ public static class StudentManager
     {
         try
         {
-            return JsonSerializer.Deserialize<List<StudentCoreData>>(json) ?? new List<StudentCoreData>();
+            return JsonSerializer.Deserialize<List<StudentCoreData>>(json, JsonReadOptions) ?? new List<StudentCoreData>();
         }
         catch
         {
@@ -113,11 +118,87 @@ public static class StudentManager
     {
         try
         {
-            return JsonSerializer.Deserialize<List<StudentIepData>>(json) ?? new List<StudentIepData>();
+            var parsed = JsonSerializer.Deserialize<List<StudentIepData>>(json, JsonReadOptions);
+            if (parsed != null)
+            {
+                return parsed;
+            }
+
+            return new List<StudentIepData>();
         }
         catch
         {
-            return new List<StudentIepData>();
+            // Fallback parser for legacy/partially incompatible session payloads.
+            try
+            {
+                var result = new List<StudentIepData>();
+                using var doc = JsonDocument.Parse(json);
+
+                if (doc.RootElement.ValueKind != JsonValueKind.Array)
+                {
+                    return result;
+                }
+
+                foreach (var studentElem in doc.RootElement.EnumerateArray())
+                {
+                    string id = studentElem.TryGetProperty("Id", out var idElem) ? (idElem.GetString() ?? string.Empty) : string.Empty;
+                    int totalReceived = studentElem.TryGetProperty("TotalMinutesReceived", out var recvElem) && recvElem.TryGetInt32(out int recv) ? recv : 0;
+                    int totalRequired = studentElem.TryGetProperty("TotalMinutesRequired", out var reqElem) && reqElem.TryGetInt32(out int req) ? req : 120;
+
+                    var iep = new StudentIepData
+                    {
+                        Id = id,
+                        TotalMinutesReceived = totalReceived,
+                        TotalMinutesRequired = totalRequired,
+                        Sessions = new List<Session>()
+                    };
+
+                    if (studentElem.TryGetProperty("Sessions", out var sessionsElem) && sessionsElem.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var sessElem in sessionsElem.EnumerateArray())
+                        {
+                            var session = new Session();
+
+                            if (sessElem.TryGetProperty("Id", out var sessIdElem))
+                                session.Id = sessIdElem.GetString() ?? Guid.NewGuid().ToString();
+
+                            if (sessElem.TryGetProperty("Date", out var dateElem) && DateTime.TryParse(dateElem.GetString(), out DateTime parsedDate))
+                                session.Date = parsedDate.Date;
+
+                            if (sessElem.TryGetProperty("TimeOfDay", out var timeElem) && TimeSpan.TryParse(timeElem.GetString(), out TimeSpan parsedTime))
+                                session.TimeOfDay = parsedTime;
+
+                            if (sessElem.TryGetProperty("Minutes", out var minutesElem) && minutesElem.TryGetInt32(out int minutes))
+                                session.Minutes = minutes;
+
+                            if (sessElem.TryGetProperty("Code", out var codeElem) && codeElem.TryGetInt32(out int codeValue))
+                                session.Code = (SessionCode)codeValue;
+
+                            if (sessElem.TryGetProperty("IsCompleted", out var completedElem) && completedElem.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                                session.IsCompleted = completedElem.GetBoolean();
+
+                            if (sessElem.TryGetProperty("LinkedSessionId", out var linkedIdElem))
+                                session.LinkedSessionId = linkedIdElem.GetString();
+
+                            if (sessElem.TryGetProperty("LinkedSessionDate", out var linkedDateElem) && DateTime.TryParse(linkedDateElem.GetString(), out DateTime linkedDate))
+                                session.LinkedSessionDate = linkedDate;
+
+                            if (sessElem.TryGetProperty("Notes", out var notesElem))
+                                session.Notes = notesElem.GetString() ?? string.Empty;
+
+                            iep.Sessions.Add(session);
+                        }
+                    }
+
+                    result.Add(iep);
+                }
+
+                return result;
+            }
+            catch
+            {
+                return new List<StudentIepData>();
+            }
         }
     }
 
@@ -155,6 +236,21 @@ public static class StudentManager
             }
 
             result.Add(student);
+        }
+
+        // Include IEP-only students if core data is missing or incomplete.
+        foreach (var iepOnly in iepData.Where(i => !result.Any(r => r.Id == i.Id)))
+        {
+            result.Add(new Student
+            {
+                Id = iepOnly.Id,
+                Name = string.IsNullOrWhiteSpace(iepOnly.Id) ? "Unknown Student" : $"Student {iepOnly.Id[..Math.Min(8, iepOnly.Id.Length)]}",
+                IsArchived = false,
+                MonthlyRequiredMinutes = 120,
+                Sessions = iepOnly.Sessions ?? new List<Session>(),
+                TotalMinutesReceived = iepOnly.TotalMinutesReceived,
+                TotalMinutesRequired = iepOnly.TotalMinutesRequired
+            });
         }
 
         return result;

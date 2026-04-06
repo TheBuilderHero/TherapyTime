@@ -16,6 +16,10 @@ public class Session
 
     public string DisplayText => $"{Date:MM/dd/yyyy} {DateTime.Today.Add(TimeOfDay):hh:mm tt} - {Minutes} minutes";
 
+    public Session()
+    {
+    }
+
     public Session(DateTime date, int minutes, SessionCode code, TimeSpan? timeOfDay = null)
     {
         Date = date.Date;

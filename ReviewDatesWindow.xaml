@@ -1,0 +1,62 @@
+<Window x:Class="TherapyTime.ReviewDatesWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Review and Reevaluation Dates"
+        Height="520"
+        Width="980"
+        MinHeight="420"
+        MinWidth="820"
+        WindowStartupLocation="CenterOwner"
+        Background="#F5F7FA">
+
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#FFFFFF" BorderBrush="#D0D7DE" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
+            <StackPanel>
+                <TextBlock Text="Student Review and Reevaluation Dates" FontSize="20" FontWeight="Bold" Foreground="#1F2937"/>
+                <TextBlock x:Name="SummaryText" FontSize="13" FontWeight="SemiBold" Foreground="#374151" Margin="0,4,0,0"/>
+                <TextBlock Text="Dates within the next 30 days are highlighted in yellow and bold." FontSize="12" Foreground="#6B7280" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#D0D7DE" BorderThickness="1" CornerRadius="8">
+            <DataGrid x:Name="ReviewDatesDataGrid"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      CanUserAddRows="False"
+                      HeadersVisibility="Column"
+                      GridLinesVisibility="Horizontal"
+                      RowHeaderWidth="0"
+                      Margin="8">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Student Name" Binding="{Binding StudentName}" Width="1.3*"/>
+                    <DataGridTextColumn Header="Past Annual Reviews" Binding="{Binding PastAnnualReviewsText}" Width="1.4*"/>
+                    <DataGridTemplateColumn Header="Future Annual Reviews" Width="1.4*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding FutureAnnualReviewsText}"
+                                           Foreground="{Binding FutureAnnualReviewsBrush}"
+                                           FontWeight="{Binding FutureAnnualReviewsFontWeight}"
+                                           TextWrapping="Wrap"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="3-Year Reevaluation" Width="1.2*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding ReevaluationText}"
+                                           Foreground="{Binding ReevaluationBrush}"
+                                           FontWeight="{Binding ReevaluationFontWeight}"
+                                           TextWrapping="Wrap"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+    </Grid>
+</Window>

@@ -47,6 +47,7 @@ public partial class MainWindow : Window
 
             PopulateStudentMenus();
             CreateButtonGrid();
+            ShowUpcomingReviewReminders();
         }
         else
         {
@@ -58,6 +59,7 @@ public partial class MainWindow : Window
     {
         // Load core student data
         var coreStudents = new List<StudentCoreData>();
+        string iepJsonText = string.Empty;
         if (File.Exists(_persistentStudentsPath))
         {
             coreStudents = StudentManager.LoadCoreDataFromJson(File.ReadAllText(_persistentStudentsPath));
@@ -67,7 +69,23 @@ public partial class MainWindow : Window
         var iepData = new List<StudentIepData>();
         if (File.Exists(_studentFilePath))
         {
-            iepData = StudentManager.LoadIepDataFromJson(File.ReadAllText(_studentFilePath));
+            iepJsonText = File.ReadAllText(_studentFilePath);
+            iepData = StudentManager.LoadIepDataFromJson(iepJsonText);
+        }
+
+        // Backward compatibility: older IEP files stored full Student objects.
+        // If split-format parsing produced no rows, try legacy format and migrate.
+        if (File.Exists(_studentFilePath) && iepData.Count == 0)
+        {
+            var legacyStudents = StudentManager.LoadFromJson(iepJsonText);
+            if (legacyStudents.Count > 0)
+            {
+                _allStudents = legacyStudents;
+
+                // Ensure core file exists and migrate this IEP to split format.
+                SaveStudents();
+                return;
+            }
         }
 
         // Merge them
@@ -119,22 +137,57 @@ public partial class MainWindow : Window
             else
             {
                 DateTime currentDay = startDate.AddDays(dayCounter - 1);
+                var daySummary = GetDaySessionSummary(currentDay);
+                int sessionCount = daySummary.Count;
+                bool hasSessions = sessionCount > 0;
+
+                var dayBorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(200, 200, 200));
+                var dayBorderThickness = new Thickness(1);
+                string statusText = "No sessions";
+
+                if (hasSessions)
+                {
+                    dayBorderThickness = new Thickness(3);
+
+                    if (daySummary.AllCompleted)
+                    {
+                        dayBorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(44, 125, 50));
+                        statusText = "All completed";
+                    }
+                    else if (daySummary.NoneCompleted)
+                    {
+                        dayBorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(209, 88, 58));
+                        statusText = "None completed";
+                    }
+                    else
+                    {
+                        dayBorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(208, 148, 46));
+                        statusText = "Mixed completion";
+                    }
+                }
 
                 dayButton = new Button
                 {
-                    Content = currentDay.Day.ToString(),
+                    Content = hasSessions ? $"{currentDay.Day}\n({sessionCount})" : currentDay.Day.ToString(),
                     Tag = currentDay,
                     Width = 70,
                     Height = 70,
                     Margin = new Thickness(3),
-                    Background = new SolidColorBrush(System.Windows.Media.Colors.White),
-                    BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(200, 200, 200)),
-                    BorderThickness = new Thickness(1),
+                    Background = new SolidColorBrush(hasSessions
+                        ? System.Windows.Media.Color.FromRgb(220, 245, 220)
+                        : System.Windows.Media.Colors.White),
+                    BorderBrush = dayBorderBrush,
+                    BorderThickness = dayBorderThickness,
                     FontWeight = FontWeights.SemiBold,
                     HorizontalContentAlignment = HorizontalAlignment.Center,
                     VerticalContentAlignment = VerticalAlignment.Center,
                     Cursor = Cursors.Hand
                 };
+
+                if (hasSessions)
+                {
+                    dayButton.ToolTip = $"{sessionCount} session(s) scheduled - {statusText}";
+                }
 
                 // Highlight today
                 if (currentDay.Date == DateTime.Today)
@@ -151,6 +204,8 @@ public partial class MainWindow : Window
                 {
                     if (currentDay.Date == DateTime.Today)
                         dayButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(180, 220, 255));
+                    else if (hasSessions)
+                        dayButton.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 245, 220));
                     else
                         dayButton.Background = new SolidColorBrush(System.Windows.Media.Colors.White);
                 };
@@ -162,6 +217,23 @@ public partial class MainWindow : Window
 
             panelGrid.Children.Add(dayButton);
         }
+    }
+
+    private (int Count, bool AllCompleted, bool NoneCompleted) GetDaySessionSummary(DateTime date)
+    {
+        var sessionsOnDate = _allStudents
+            .SelectMany(s => s.Sessions)
+            .Where(sess => sess.Date.Date == date.Date)
+            .ToList();
+
+        if (sessionsOnDate.Count == 0)
+        {
+            return (0, false, false);
+        }
+
+        bool allCompleted = sessionsOnDate.All(s => s.IsCompleted);
+        bool noneCompleted = sessionsOnDate.All(s => !s.IsCompleted);
+        return (sessionsOnDate.Count, allCompleted, noneCompleted);
     }
 
     private void AddSession_Click(object sender, RoutedEventArgs e)
@@ -212,6 +284,7 @@ public partial class MainWindow : Window
 
             student.ScheduleSession(date, minutes, sessionCode, sessionTime);
             SaveStudents();
+            CreateButtonGrid();
             MessageBox.Show($"Session added for {student.Name} on {date:MM/dd/yyyy} at {DateTime.Today.Add(sessionTime):hh:mm tt} ({minutes} minutes, code: {sessionCode}).", "Info");
 
             // Update the last session add date for future additions
@@ -251,6 +324,7 @@ public partial class MainWindow : Window
 
                 PopulateStudentMenus();
                 CreateButtonGrid();
+                ShowUpcomingReviewReminders();
             }
         }
     }
@@ -271,28 +345,38 @@ public partial class MainWindow : Window
     // --- New Student ---
     private void NewStudent_Click(object sender, RoutedEventArgs e)
     {
-        string? studentName = Microsoft.VisualBasic.Interaction.InputBox(
-            "Enter the new student's name:",
-            "New Student",
-            "");
+        var addStudentWindow = new AddStudentWindow
+        {
+            Owner = this
+        };
 
-        if (!string.IsNullOrWhiteSpace(studentName))
+        if (addStudentWindow.ShowDialog() != true)
         {
-            Student newStudent = new Student(studentName);
-            _allStudents.Add(newStudent);
-            SaveStudents();
-            // After adding a new student
-            PopulateStudentMenus();
-            MessageBox.Show($"Student '{studentName}' added.", "Info");
+            return;
         }
-        else
+
+        Student newStudent = new Student(addStudentWindow.StudentName)
         {
-            MessageBox.Show("No name entered. Student not added.", "Info");
+            MonthlyRequiredMinutes = addStudentWindow.MonthlyRequiredMinutes,
+            TotalMinutesRequired = addStudentWindow.MonthlyRequiredMinutes,
+            FutureAnnualReviews = new List<DateTime> { addStudentWindow.FutureAnnualReview },
+            NextThreeYearReevaluation = addStudentWindow.NextThreeYearReevaluation
+        };
+
+        if (addStudentWindow.PastAnnualReview.HasValue)
+        {
+            newStudent.PastAnnualReviews.Add(addStudentWindow.PastAnnualReview.Value);
         }
+
+        _allStudents.Add(newStudent);
+        SaveStudents();
+        PopulateStudentMenus();
+        MessageBox.Show($"Student '{addStudentWindow.StudentName}' added.", "Info");
     }
 
     private void PopulateStudentMenus()
     {
+        UpdateRequiredMinutesMenu.Items.Clear();
         ArchiveStudentMenu.Items.Clear();
         UnarchiveStudentMenu.Items.Clear();
         DeleteStudentMenu.Items.Clear();
@@ -300,6 +384,28 @@ public partial class MainWindow : Window
         var activeStudents = _allStudents.Where(s => !s.IsArchived).OrderBy(s => s.Name).ToList();
         var archivedStudents = _allStudents.Where(s => s.IsArchived).OrderBy(s => s.Name).ToList();
         var allStudentsSorted = _allStudents.OrderBy(s => s.Name).ToList();
+
+        if (allStudentsSorted.Count == 0)
+        {
+            MenuItem updateEmptyItem = new MenuItem { Header = "(No students)" };
+            updateEmptyItem.IsEnabled = false;
+            UpdateRequiredMinutesMenu.Items.Add(updateEmptyItem);
+        }
+        else
+        {
+            foreach (var student in allStudentsSorted)
+            {
+                MenuItem updateMinutesItem = new MenuItem
+                {
+                    Header = student.IsArchived
+                        ? $"{student.Name} (Archived) ({student.TotalMinutesRequired} min)"
+                        : $"{student.Name} ({student.TotalMinutesRequired} min)",
+                    Tag = student
+                };
+                updateMinutesItem.Click += UpdateRequiredMinutes_Click;
+                UpdateRequiredMinutesMenu.Items.Add(updateMinutesItem);
+            }
+        }
 
         if (allStudentsSorted.Count == 0)
         {
@@ -361,6 +467,33 @@ public partial class MainWindow : Window
                 UnarchiveStudentMenu.Items.Add(studentItem);
             }
         }
+    }
+
+    private void UpdateRequiredMinutes_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem menuItem || menuItem.Tag is not Student student)
+            return;
+
+        string? input = Microsoft.VisualBasic.Interaction.InputBox(
+            $"Enter required minutes for {student.Name}:",
+            "Update Required Minutes",
+            student.TotalMinutesRequired.ToString());
+
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return;
+        }
+
+        if (!int.TryParse(input, out int newRequiredMinutes) || newRequiredMinutes < 0)
+        {
+            MessageBox.Show("Please enter a valid non-negative number of minutes.", "Invalid Input", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        student.TotalMinutesRequired = newRequiredMinutes;
+        SaveStudents();
+        PopulateStudentMenus();
+        MessageBox.Show($"Updated required minutes for {student.Name} to {newRequiredMinutes}.", "Updated", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private void DeleteStudent_Click(object sender, RoutedEventArgs e)
@@ -470,6 +603,103 @@ public partial class MainWindow : Window
         MessageBox.Show("TherapyTime v1.0", "About");
     }
 
+    private void ShowStudentStatistics_Click(object sender, RoutedEventArgs e)
+    {
+        if (_allStudents.Count == 0)
+        {
+            MessageBox.Show("No students available for statistics.", "Info");
+            return;
+        }
+
+        var statisticsWindow = new StatisticsWindow(_allStudents, _startDate, _endDate)
+        {
+            Owner = this
+        };
+
+        statisticsWindow.ShowDialog();
+    }
+
+    private void ShowDailyView_Click(object sender, RoutedEventArgs e)
+    {
+        if (_allStudents.Count == 0)
+        {
+            MessageBox.Show("No students available for daily view.", "Info");
+            return;
+        }
+
+        var dailyViewWindow = new DailyViewWindow(_allStudents, _startDate, _endDate)
+        {
+            Owner = this
+        };
+
+        dailyViewWindow.ShowDialog();
+    }
+
+    private void ShowReviewDates_Click(object sender, RoutedEventArgs e)
+    {
+        if (_allStudents.Count == 0)
+        {
+            MessageBox.Show("No students available for review dates.", "Info");
+            return;
+        }
+
+        var reviewDatesWindow = new ReviewDatesWindow(_allStudents)
+        {
+            Owner = this
+        };
+
+        reviewDatesWindow.ShowDialog();
+    }
+
+    private void ShowUpcomingReviewReminders()
+    {
+        DateTime today = DateTime.Today;
+        DateTime reminderEnd = today.AddDays(30);
+
+        var annualReviewReminders = _allStudents
+            .Where(student => !student.IsArchived)
+            .SelectMany(student => student.FutureAnnualReviews
+                .Where(date => date.Date >= today && date.Date <= reminderEnd)
+                .Select(date => new { student.Name, Date = date.Date }))
+            .OrderBy(item => item.Date)
+            .ThenBy(item => item.Name)
+            .ToList();
+
+        var reevaluationReminders = _allStudents
+            .Where(student => !student.IsArchived && student.NextThreeYearReevaluation.HasValue)
+            .Select(student => new { student.Name, Date = student.NextThreeYearReevaluation!.Value.Date })
+            .Where(item => item.Date >= today && item.Date <= reminderEnd)
+            .OrderBy(item => item.Date)
+            .ThenBy(item => item.Name)
+            .ToList();
+
+        if (annualReviewReminders.Count == 0 && reevaluationReminders.Count == 0)
+        {
+            return;
+        }
+
+        var reminderLines = new List<string>
+        {
+            $"Upcoming dates in the next 30 days ({today:MM/dd/yyyy} - {reminderEnd:MM/dd/yyyy}):",
+            string.Empty
+        };
+
+        if (annualReviewReminders.Count > 0)
+        {
+            reminderLines.Add("Annual Reviews:");
+            reminderLines.AddRange(annualReviewReminders.Select(item => $"- {item.Date:MM/dd/yyyy}: {item.Name}"));
+            reminderLines.Add(string.Empty);
+        }
+
+        if (reevaluationReminders.Count > 0)
+        {
+            reminderLines.Add("3-Year Reevaluations:");
+            reminderLines.AddRange(reevaluationReminders.Select(item => $"- {item.Date:MM/dd/yyyy}: {item.Name}"));
+        }
+
+        MessageBox.Show(string.Join(Environment.NewLine, reminderLines).TrimEnd(), "Upcoming Review Reminders", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
     private void SaveStudents()
     {
         // Save IEP-specific data to the IEP file
@@ -499,7 +729,7 @@ public partial class MainWindow : Window
             try
             {
                 var activeStudents = _allStudents.Where(s => !s.IsArchived).ToList();
-                EditDaySessionsWindow editWindow = new EditDaySessionsWindow(_allStudents, activeStudents, day, _startDate, _endDate)
+                EditDaySessionsWindow editWindow = new EditDaySessionsWindow(_allStudents, activeStudents, day, _startDate, _endDate, SaveStudents)
                 {
                     Owner = this
                 };
@@ -509,6 +739,7 @@ public partial class MainWindow : Window
                 if (result == true)
                 {
                     SaveStudents();
+                    CreateButtonGrid();
                     MessageBox.Show($"Sessions for {day:MM/dd/yyyy} saved.", "Info");
                 }
             }

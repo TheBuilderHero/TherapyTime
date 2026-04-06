@@ -1,0 +1,56 @@
+<Window x:Class="TherapyTime.DailyViewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Daily View"
+        Height="600"
+        Width="1060"
+        MinHeight="420"
+        MinWidth="600"
+        WindowStartupLocation="CenterOwner"
+        Background="#F5F7FA">
+
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="#FFFFFF" BorderBrush="#D0D7DE" BorderThickness="1"
+                CornerRadius="8" Padding="12" Margin="0,0,0,8">
+            <StackPanel>
+                <TextBlock Text="Daily View" FontSize="20" FontWeight="Bold" Foreground="#1F2937"/>
+                <TextBlock Text="Session status per student by day" FontSize="12" Foreground="#6B7280" Margin="0,4,0,0"/>
+                <TextBlock x:Name="RangeText" FontSize="13" FontWeight="SemiBold" Foreground="#374151"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Week Navigation -->
+        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#D0D7DE" BorderThickness="1"
+                CornerRadius="8" Padding="10,8" Margin="0,0,0,8">
+            <DockPanel>
+                <Button x:Name="PrevWeekButton" Content="◀  Prev Week"
+                        Click="PrevWeek_Click"
+                        Padding="12,6" Cursor="Hand"
+                        Background="#F3F4F6" BorderBrush="#D1D5DB"
+                        DockPanel.Dock="Left" Margin="0,0,12,0"/>
+                <Button x:Name="NextWeekButton" Content="Next Week  ▶"
+                        Click="NextWeek_Click"
+                        Padding="12,6" Cursor="Hand"
+                        Background="#F3F4F6" BorderBrush="#D1D5DB"
+                        DockPanel.Dock="Right" Margin="12,0,0,0"/>
+                <TextBlock x:Name="WeekRangeText"
+                           FontSize="14" FontWeight="SemiBold" Foreground="#374151"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
+
+        <!-- Grid area -->
+        <Border Grid.Row="2" Background="#FFFFFF" BorderBrush="#D0D7DE" BorderThickness="1" CornerRadius="8">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <Grid x:Name="DailyGrid" Margin="8"/>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</Window>

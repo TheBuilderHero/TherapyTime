@@ -15,15 +15,23 @@
                 <MenuItem Header="New/Open IEP" Click="NewIEP_Click"/>
                 <MenuItem Header="Save IEP" Click="SaveIEP_Click"/>
                 <Separator/>
-                <MenuItem Header="New Student" Click="NewStudent_Click"/>
-                <MenuItem Header="Archive Student" x:Name="ArchiveStudentMenu"/>
-                <MenuItem Header="Unarchive Student" x:Name="UnarchiveStudentMenu"/>
-                <MenuItem Header="Delete Student" x:Name="DeleteStudentMenu"/>
                 <MenuItem Header="Exit" Click="Exit_Click"/>
             </MenuItem>
 
-            <MenuItem Header="_Edit">
+            <MenuItem Header="_Student">
                 <MenuItem Header="Add Session" Click="AddSession_Click" />
+                <Separator/>
+                <MenuItem Header="New Student" Click="NewStudent_Click"/>
+                <MenuItem Header="Update Required Minutes" x:Name="UpdateRequiredMinutesMenu"/>
+                <MenuItem Header="Archive Student" x:Name="ArchiveStudentMenu"/>
+                <MenuItem Header="Unarchive Student" x:Name="UnarchiveStudentMenu"/>
+                <MenuItem Header="Delete Student" x:Name="DeleteStudentMenu"/>
+            </MenuItem>
+
+            <MenuItem Header="_Statistics">
+                <MenuItem Header="Student Minutes and Sessions (Current IEP)" Click="ShowStudentStatistics_Click"/>
+                <MenuItem Header="Daily View (Current IEP)" Click="ShowDailyView_Click"/>
+                <MenuItem Header="Review and Reevaluation Dates" Click="ShowReviewDates_Click"/>
             </MenuItem>
 
             <MenuItem Header="_Help">

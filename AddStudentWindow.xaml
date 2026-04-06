@@ -1,0 +1,50 @@
+<Window x:Class="TherapyTime.AddStudentWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Add Student" Height="360" Width="440" MinHeight="360" MinWidth="440"
+        WindowStartupLocation="CenterOwner" Background="#F5F7FA">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Label Grid.Row="0" Grid.Column="0" Content="Student Name:" VerticalAlignment="Center"/>
+        <TextBox Grid.Row="0" Grid.Column="1" x:Name="StudentNameTextBox" Margin="6" MinWidth="220"/>
+
+        <Label Grid.Row="1" Grid.Column="0" Content="Required Minutes:" VerticalAlignment="Center"/>
+        <TextBox Grid.Row="1" Grid.Column="1" x:Name="RequiredMinutesTextBox" Margin="6" Text="120"/>
+
+        <Label Grid.Row="2" Grid.Column="0" Content="Future Annual Review:" VerticalAlignment="Center"/>
+        <DatePicker Grid.Row="2" Grid.Column="1" x:Name="FutureAnnualReviewPicker" Margin="6"/>
+
+        <Label Grid.Row="3" Grid.Column="0" Content="Next 3-Year Reevaluation:" VerticalAlignment="Center"/>
+        <DatePicker Grid.Row="3" Grid.Column="1" x:Name="NextThreeYearReevaluationPicker" Margin="6"/>
+
+        <CheckBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" x:Name="AddPastAnnualReviewCheckBox"
+                  Margin="6,10,6,0" Content="Add Past Annual Review"
+                  Checked="AddPastAnnualReviewCheckBox_Changed"
+                  Unchecked="AddPastAnnualReviewCheckBox_Changed"/>
+
+        <StackPanel Grid.Row="5" Grid.Column="1" Margin="0,6,0,0">
+            <Label Content="Past Annual Review:" VerticalAlignment="Center" Padding="0"/>
+            <DatePicker x:Name="PastAnnualReviewPicker" Margin="0,4,6,0" IsEnabled="False"/>
+            <TextBlock Text="Optional. Leave unchecked if there is no past annual review to add."
+                       Margin="0,6,6,0" Foreground="#6B7280" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="6" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="Add" Width="88" Margin="6,0,0,0" Click="Add_Click"/>
+            <Button Content="Cancel" Width="88" Margin="6,0,0,0" Click="Cancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

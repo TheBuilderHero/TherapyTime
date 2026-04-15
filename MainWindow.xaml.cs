@@ -443,30 +443,7 @@ public partial class MainWindow : Window
 
     private void PopulateStudentMenus()
     {
-        DeleteStudentMenu.Items.Clear();
-
-        var allStudentsSorted = _allStudents.OrderBy(s => s.Name).ToList();
-
-        if (allStudentsSorted.Count == 0)
-        {
-            MenuItem deleteEmptyItem = new MenuItem { Header = "(No students)" };
-            deleteEmptyItem.IsEnabled = false;
-            DeleteStudentMenu.Items.Add(deleteEmptyItem);
-        }
-
-        if (allStudentsSorted.Count > 0)
-        {
-            foreach (var student in allStudentsSorted)
-            {
-                MenuItem deleteStudentItem = new MenuItem
-                {
-                    Header = student.IsArchived ? $"{student.Name} (Archived)" : student.Name,
-                    Tag = student
-                };
-                deleteStudentItem.Click += DeleteStudent_Click;
-                DeleteStudentMenu.Items.Add(deleteStudentItem);
-            }
-        }
+        // Student menu is now command-based; no dynamic per-student menu population required.
     }
 
     private void OpenStudentInformation_Click(object sender, RoutedEventArgs e)
@@ -492,130 +469,6 @@ public partial class MainWindow : Window
         CreateButtonGrid();
     }
 
-    private void UpdateRequiredMinutes_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not MenuItem menuItem || menuItem.Tag is not Student student)
-            return;
-
-        string? input = Microsoft.VisualBasic.Interaction.InputBox(
-            $"Enter required minutes for {student.Name}:",
-            "Update Required Minutes",
-            student.TotalMinutesRequired.ToString());
-
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return;
-        }
-
-        if (!int.TryParse(input, out int newRequiredMinutes) || newRequiredMinutes < 0)
-        {
-            MessageBox.Show("Please enter a valid non-negative number of minutes.", "Invalid Input", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        student.TotalMinutesRequired = newRequiredMinutes;
-        SaveStudents();
-        PopulateStudentMenus();
-        MessageBox.Show($"Updated required minutes for {student.Name} to {newRequiredMinutes}.", "Updated", MessageBoxButton.OK, MessageBoxImage.Information);
-    }
-
-    private void DeleteStudent_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not MenuItem menuItem || menuItem.Tag is not Student student)
-            return;
-
-        var sessionsInIepRange = student.Sessions
-            .Where(s => s.Date.Date >= _startDate.Date && s.Date.Date <= _endDate.Date)
-            .OrderBy(s => s.SessionDateTime)
-            .ToList();
-
-        if (sessionsInIepRange.Count > 0)
-        {
-            string sessionList = string.Join("\n", sessionsInIepRange.Select(s =>
-                $"- {s.Date:MM/dd/yyyy} {DateTime.Today.Add(s.TimeOfDay):hh:mm tt} ({s.Minutes} min, {s.Code})"));
-
-            var warningResult = MessageBox.Show(
-                $"Deleting {student.Name} will permanently remove all their sessions in this IEP year range.\n\n" +
-                "Sessions that will be deleted:\n" +
-                $"{sessionList}\n\n" +
-                "Do you want to continue?",
-                "Delete Student Warning",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-
-            if (warningResult != MessageBoxResult.Yes)
-                return;
-        }
-        else
-        {
-            var confirmNoSessions = MessageBox.Show(
-                $"Delete {student.Name}? This cannot be undone.",
-                "Delete Student",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-
-            if (confirmNoSessions != MessageBoxResult.Yes)
-                return;
-        }
-
-        var finalConfirm = MessageBox.Show(
-            $"Final confirmation: delete {student.Name}?",
-            "Confirm Delete",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Stop);
-
-        if (finalConfirm != MessageBoxResult.Yes)
-            return;
-
-        _allStudents.Remove(student);
-        SaveStudents();
-        PopulateStudentMenus();
-        CreateButtonGrid();
-        MessageBox.Show($"{student.Name} has been deleted.", "Delete Complete", MessageBoxButton.OK, MessageBoxImage.Information);
-    }
-
-    private void ArchiveStudent_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is MenuItem menuItem && menuItem.Tag is Student student)
-        {
-            var result = MessageBox.Show(
-                $"Archive {student.Name}?\n\nArchived students are hidden from all Add Session flows, but existing data is preserved.",
-                "Archive Student",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (result != MessageBoxResult.Yes)
-                return;
-
-            student.IsArchived = true;
-            SaveStudents();
-            PopulateStudentMenus();
-            MessageBox.Show($"{student.Name} has been archived.", "Archive Complete", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-    }
-
-    private void UnarchiveStudent_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is MenuItem menuItem && menuItem.Tag is Student student)
-        {
-            var result = MessageBox.Show(
-                $"Unarchive {student.Name}?\n\nThey will appear again in all Add Session lists.",
-                "Unarchive Student",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (result != MessageBoxResult.Yes)
-                return;
-
-            student.IsArchived = false;
-            SaveStudents();
-            PopulateStudentMenus();
-            MessageBox.Show($"{student.Name} has been unarchived.", "Unarchive Complete", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-    }
-
-
-
     private void Exit_Click(object sender, RoutedEventArgs e)
     {
         Application.Current.Shutdown();
@@ -638,7 +491,7 @@ public partial class MainWindow : Window
             "Purpose:\n" +
             "- Central workspace for IEP scheduling, editing, and statistics.\n\n" +
             "How to use this window:\n" +
-            "- Use the Student menu to add students, sessions, and manage required minutes.\n" +
+            "- Use the Student menu to add students, sessions, and open View/Update Student Information.\n" +
             "- Click any day button to edit sessions for that date.\n" +
             "- Use Statistics for progress and review-date reporting.\n\n" +
             "What day indicators mean:\n" +

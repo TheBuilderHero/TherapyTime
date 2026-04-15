@@ -6,6 +6,8 @@ namespace TherapyTime;
 
 public partial class AboutWindow : Window
 {
+    private const string UpdatesUrl = "https://github.com/TheBuilderHero/TherapyTime/tags";
+
     public AboutWindow()
     {
         InitializeComponent();
@@ -29,5 +31,27 @@ public partial class AboutWindow : Window
     private void Close_Click(object sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    private void CheckForUpdates_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = UpdatesUrl,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                "Unable to open updates page.\n\n" +
+                UpdatesUrl + "\n\n" +
+                "Error: " + ex.Message,
+                "Open Updates Page Failed",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
     }
 }

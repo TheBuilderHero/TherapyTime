@@ -5,6 +5,7 @@ namespace TherapyTime;
 
 public partial class StudentInformationWindow : Window
 {
+    private readonly List<Student> _studentsSource;
     private readonly List<Student> _students;
     private readonly Action _persistChanges;
     private Student? _selectedStudent;
@@ -13,6 +14,7 @@ public partial class StudentInformationWindow : Window
     {
         InitializeComponent();
 
+        _studentsSource = students;
         _students = students.OrderBy(s => s.Name).ToList();
         _persistChanges = persistChanges;
 
@@ -52,6 +54,9 @@ public partial class StudentInformationWindow : Window
 
         FutureAnnualReviewPicker.SelectedDate = _selectedStudent.FutureAnnualReviews.OrderByDescending(d => d).FirstOrDefault();
         NextThreeYearReevaluationPicker.SelectedDate = _selectedStudent.NextThreeYearReevaluation;
+
+        DeleteConfirmationTextBox.Text = string.Empty;
+        DeleteInstructionText.Text = $"Type '{_selectedStudent.Name}' to permanently delete this student.";
 
         BuildSessionHistoryTree(_selectedStudent);
     }
@@ -167,5 +172,102 @@ public partial class StudentInformationWindow : Window
     private void Cancel_Click(object sender, RoutedEventArgs e)
     {
         DialogResult = false;
+    }
+
+    private void DeleteStudent_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selectedStudent == null)
+        {
+            MessageBox.Show("Select a student first.", "Delete Student", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        string expected = _selectedStudent.Name.Trim();
+        string typed = DeleteConfirmationTextBox.Text.Trim();
+
+        if (!string.Equals(expected, typed, StringComparison.Ordinal))
+        {
+            MessageBox.Show(
+                $"To delete this student, type the full name exactly: {expected}",
+                "Typed Name Confirmation Required",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
+        var sessionsInYearRange = _selectedStudent.Sessions
+            .OrderBy(s => s.SessionDateTime)
+            .ToList();
+
+        if (sessionsInYearRange.Count > 0)
+        {
+            string preview = string.Join("\n", sessionsInYearRange.Take(10).Select(s =>
+                $"- {s.Date:MM/dd/yyyy} {DateTime.Today.Add(s.TimeOfDay):hh:mm tt} ({s.Minutes} min, {s.Code})"));
+
+            if (sessionsInYearRange.Count > 10)
+            {
+                preview += $"\n... and {sessionsInYearRange.Count - 10} more session(s).";
+            }
+
+            var warningResult = MessageBox.Show(
+                $"WARNING: Deleting {_selectedStudent.Name} permanently removes all their data and sessions.\n\n" +
+                "Session preview:\n" +
+                preview +
+                "\n\nContinue?",
+                "Delete Student Warning",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (warningResult != MessageBoxResult.Yes)
+                return;
+        }
+        else
+        {
+            var warningNoSessions = MessageBox.Show(
+                $"Delete {_selectedStudent.Name}? This cannot be undone.",
+                "Delete Student Warning",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (warningNoSessions != MessageBoxResult.Yes)
+                return;
+        }
+
+        var finalResult = MessageBox.Show(
+            $"FINAL WARNING: Permanently delete {_selectedStudent.Name}?",
+            "Final Confirm Delete",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Stop);
+
+        if (finalResult != MessageBoxResult.Yes)
+            return;
+
+        _studentsSource.Remove(_selectedStudent);
+        _students.Remove(_selectedStudent);
+        _persistChanges();
+
+        StudentListBox.ItemsSource = null;
+        StudentListBox.ItemsSource = _students.OrderBy(s => s.Name).ToList();
+        StudentListBox.SelectedItem = ((List<Student>)StudentListBox.ItemsSource).FirstOrDefault();
+
+        if (StudentListBox.SelectedItem == null)
+        {
+            FirstNameTextBox.Text = string.Empty;
+            LastNameTextBox.Text = string.Empty;
+            RequiredMinutesTextBox.Text = string.Empty;
+            ArchivedCheckBox.IsChecked = false;
+            MainContactNameTextBox.Text = string.Empty;
+            MainContactPhoneTextBox.Text = string.Empty;
+            MainContactEmailTextBox.Text = string.Empty;
+            PreferPhoneCheckBox.IsChecked = false;
+            PreferEmailCheckBox.IsChecked = false;
+            FutureAnnualReviewPicker.SelectedDate = null;
+            NextThreeYearReevaluationPicker.SelectedDate = null;
+            DeleteConfirmationTextBox.Text = string.Empty;
+            DeleteInstructionText.Text = "No student selected.";
+            SessionHistoryTree.Items.Clear();
+        }
+
+        MessageBox.Show("Student deleted successfully.", "Delete Complete", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 }

@@ -27,6 +27,9 @@
         </Border>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <TextBlock VerticalAlignment="Center" Margin="0,0,12,0">
+                <Hyperlink Click="CheckForUpdates_Click">Check for updates</Hyperlink>
+            </TextBlock>
             <Button Content="Close" Width="96" Height="32" Click="Close_Click"/>
         </StackPanel>
     </Grid>

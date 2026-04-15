@@ -45,7 +45,6 @@ The top menu contains:
 - Add Session
 - New Student
 - View/Update Student Information
-- Delete Student
 
 ### Statistics Menu
 
@@ -58,7 +57,7 @@ The top menu contains:
 
 - Documentation: Opens the GitHub README in your browser.
 - Report Issue: Opens the GitHub issues page.
-- About: Shows Developer (Dakota Stephens), Company (Nerd Brothers LLC), and app version.
+- About: Shows Developer (Dakota Stephens), Company (Nerd Brothers LLC), app version, and a "Check for updates" link to release tags.
 
 ## 2.1 In-Window Help Bubbles
 
@@ -132,6 +131,7 @@ From this page you can:
 - archive/unarchive the student
 - edit main contact details and communication preference
 - review a session history tree grouped by year and month
+- delete a student from the danger zone section by typing their exact full name
 
 Buttons:
 
@@ -141,7 +141,13 @@ Buttons:
 
 ### 4.3 Delete Student
 
-Delete permanently removes the student from the current dataset. If sessions exist in the IEP range, a detailed warning is shown first.
+Delete is available at the bottom of View/Update Student Information.
+
+Safety checks:
+
+- you must type the student's full first and last name exactly
+- you receive warning dialogs (including session preview when available)
+- a final stop-icon confirmation is required before deletion completes
 
 ## 5. Session Management
 

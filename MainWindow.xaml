@@ -30,7 +30,6 @@
                 <Separator/>
                 <MenuItem Header="New Student" Click="NewStudent_Click"/>
                 <MenuItem Header="View/Update Student Information" Click="OpenStudentInformation_Click"/>
-                <MenuItem Header="Delete Student" x:Name="DeleteStudentMenu"/>
             </MenuItem>
 
             <MenuItem Header="_Statistics">

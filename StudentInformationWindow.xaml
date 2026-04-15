@@ -126,6 +126,19 @@
                             <TreeView x:Name="SessionHistoryTree"/>
                         </Border>
                     </Expander>
+
+                    <Border Margin="0,16,0,0" Padding="10" Background="#FEF2F2" BorderBrush="#FCA5A5" BorderThickness="1" CornerRadius="6">
+                        <StackPanel>
+                            <TextBlock Text="Danger Zone" FontWeight="Bold" Foreground="#991B1B"/>
+                            <TextBlock x:Name="DeleteInstructionText"
+                                       Margin="0,6,0,0"
+                                       TextWrapping="Wrap"
+                                       Foreground="#7F1D1D"
+                                       Text="To delete this student, type their full first and last name below exactly as shown."/>
+                            <TextBox x:Name="DeleteConfirmationTextBox" Margin="0,8,0,0"/>
+                            <Button Content="Delete Student" Width="130" Margin="0,10,0,0" HorizontalAlignment="Left" Click="DeleteStudent_Click"/>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </ScrollViewer>
         </Border>

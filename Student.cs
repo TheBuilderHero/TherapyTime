@@ -12,11 +12,18 @@ public class StudentCoreData
 {
     public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
     public bool IsArchived { get; set; } = false;
     public int MonthlyRequiredMinutes { get; set; } = 120;
     public List<DateTime> PastAnnualReviews { get; set; } = new List<DateTime>();
     public List<DateTime> FutureAnnualReviews { get; set; } = new List<DateTime>();
     public DateTime? NextThreeYearReevaluation { get; set; }
+    public string MainContactName { get; set; } = string.Empty;
+    public string MainContactPhone { get; set; } = string.Empty;
+    public string MainContactEmail { get; set; } = string.Empty;
+    public bool PreferPhoneContact { get; set; } = false;
+    public bool PreferEmailContact { get; set; } = false;
 }
 
 /// <summary>
@@ -70,11 +77,18 @@ public static class StudentManager
         {
             Id = s.Id,
             Name = s.Name,
+            FirstName = s.FirstName,
+            LastName = s.LastName,
             IsArchived = s.IsArchived,
             MonthlyRequiredMinutes = s.MonthlyRequiredMinutes,
             PastAnnualReviews = s.PastAnnualReviews,
             FutureAnnualReviews = s.FutureAnnualReviews,
-            NextThreeYearReevaluation = s.NextThreeYearReevaluation
+            NextThreeYearReevaluation = s.NextThreeYearReevaluation,
+            MainContactName = s.MainContactName,
+            MainContactPhone = s.MainContactPhone,
+            MainContactEmail = s.MainContactEmail,
+            PreferPhoneContact = s.PreferPhoneContact,
+            PreferEmailContact = s.PreferEmailContact
         }).ToList();
 
         return JsonSerializer.Serialize(coreData, new JsonSerializerOptions { WriteIndented = true });
@@ -215,16 +229,28 @@ public static class StudentManager
             var student = new Student
             {
                 Id = core.Id,
-                Name = core.Name,
+                FirstName = core.FirstName,
+                LastName = core.LastName,
                 IsArchived = core.IsArchived,
                 MonthlyRequiredMinutes = core.MonthlyRequiredMinutes,
                 PastAnnualReviews = core.PastAnnualReviews,
                 FutureAnnualReviews = core.FutureAnnualReviews,
                 NextThreeYearReevaluation = core.NextThreeYearReevaluation,
+                MainContactName = core.MainContactName,
+                MainContactPhone = core.MainContactPhone,
+                MainContactEmail = core.MainContactEmail,
+                PreferPhoneContact = core.PreferPhoneContact,
+                PreferEmailContact = core.PreferEmailContact,
                 Sessions = new List<Session>(),
                 TotalMinutesReceived = 0,
                 TotalMinutesRequired = core.MonthlyRequiredMinutes
             };
+
+            // Backward compatibility for legacy core rows that only contain Name.
+            if (string.IsNullOrWhiteSpace(student.FirstName) && string.IsNullOrWhiteSpace(student.LastName) && !string.IsNullOrWhiteSpace(core.Name))
+            {
+                student.SetNameFromLegacy(core.Name);
+            }
 
             // Overlay IEP-specific data
             var iepInfo = iepData.FirstOrDefault(i => i.Id == student.Id);
@@ -244,7 +270,8 @@ public static class StudentManager
             result.Add(new Student
             {
                 Id = iepOnly.Id,
-                Name = string.IsNullOrWhiteSpace(iepOnly.Id) ? "Unknown Student" : $"Student {iepOnly.Id[..Math.Min(8, iepOnly.Id.Length)]}",
+                FirstName = string.IsNullOrWhiteSpace(iepOnly.Id) ? "Unknown" : "Student",
+                LastName = string.IsNullOrWhiteSpace(iepOnly.Id) ? "Student" : iepOnly.Id[..Math.Min(8, iepOnly.Id.Length)],
                 IsArchived = false,
                 MonthlyRequiredMinutes = 120,
                 Sessions = iepOnly.Sessions ?? new List<Session>(),
@@ -273,8 +300,25 @@ public static class StudentManager
         // Unique ID for the student
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
-        // Student name
-        public string Name { get; set; } = string.Empty;
+        // Preferred split-name model.
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+
+        // Legacy compatibility property used by existing bindings and persisted payloads.
+        public string Name
+        {
+            get
+            {
+                string full = $"{FirstName} {LastName}".Trim();
+                return string.IsNullOrWhiteSpace(full) ? _legacyName : full;
+            }
+            set
+            {
+                SetNameFromLegacy(value);
+            }
+        }
+
+        private string _legacyName = string.Empty;
 
         // Hidden from session creation lists when archived
         public bool IsArchived { get; set; } = false;
@@ -296,14 +340,77 @@ public static class StudentManager
         // 3-year reevaluation
         public DateTime? NextThreeYearReevaluation { get; set; }
 
+        // Optional primary contact information.
+        public string MainContactName { get; set; } = string.Empty;
+        public string MainContactPhone { get; set; } = string.Empty;
+        public string MainContactEmail { get; set; } = string.Empty;
+        public bool PreferPhoneContact { get; set; } = false;
+        public bool PreferEmailContact { get; set; } = false;
+
         // Constructor
         public Student(string name)
         {
-            Name = name;
+            SetNameFromLegacy(name);
         }
 
         [JsonConstructor]
         public Student() { }
+
+        public void SetNameFromLegacy(string name)
+        {
+            _legacyName = name?.Trim() ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(_legacyName))
+            {
+                FirstName = string.Empty;
+                LastName = string.Empty;
+                return;
+            }
+
+            // Keep explicit first/last if already populated.
+            if (!string.IsNullOrWhiteSpace(FirstName) || !string.IsNullOrWhiteSpace(LastName))
+            {
+                return;
+            }
+
+            var parts = _legacyName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 1)
+            {
+                FirstName = parts[0];
+                LastName = string.Empty;
+            }
+            else
+            {
+                FirstName = parts[0];
+                LastName = string.Join(" ", parts.Skip(1));
+            }
+        }
+
+        public string ContactPreferenceText
+        {
+            get
+            {
+                if (PreferPhoneContact && PreferEmailContact)
+                    return "Phone/Email";
+                if (PreferPhoneContact)
+                    return "Phone";
+                if (PreferEmailContact)
+                    return "Email";
+                return "Not Set";
+            }
+        }
+
+        public string StudentSummaryForTooltip
+        {
+            get
+            {
+                string contactName = string.IsNullOrWhiteSpace(MainContactName) ? "N/A" : MainContactName;
+                string contactPhone = string.IsNullOrWhiteSpace(MainContactPhone) ? "N/A" : MainContactPhone;
+                string contactEmail = string.IsNullOrWhiteSpace(MainContactEmail) ? "N/A" : MainContactEmail;
+
+                return $"{Name}\nReceived: {TotalMinutesReceived} min\nRequired: {TotalMinutesRequired} min\nMain Contact: {contactName}\nPref: {ContactPreferenceText}\nPhone: {contactPhone}\nEmail: {contactEmail}";
+            }
+        }
 
         /// <summary>
         /// Total therapy minutes in a given month/year

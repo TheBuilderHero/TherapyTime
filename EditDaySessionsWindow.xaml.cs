@@ -710,10 +710,27 @@ public partial class EditDaySessionsWindow : Window
             "- Cancel Changes: closes without saving edits made in this window.\n\n" +
             "What rules mean:\n" +
             "- Time overlaps are blocked for the day across all students.\n" +
-            "- MU sessions can be linked to NM sessions.",
+            "- MU sessions can be linked to NM sessions for the same student only.",
             "Edit Day Sessions Help",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
+    }
+
+    private void StudentName_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.Tag is not Student student)
+            return;
+
+        if (Owner is MainWindow mainWindow)
+        {
+            var infoWindow = new StudentInformationWindow(_allStudents, _persistChanges, student)
+            {
+                Owner = mainWindow
+            };
+
+            infoWindow.ShowDialog();
+            RefreshDataGrid();
+        }
     }
 }
 

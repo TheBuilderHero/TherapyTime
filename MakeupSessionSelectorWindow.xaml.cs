@@ -55,6 +55,7 @@ public partial class MakeupSessionSelectorWindow : Window
             "- Click Cancel to close without linking.\n\n" +
             "What list behavior means:\n" +
             "- Only NM sessions from the current IEP year up to the current MU session date are shown.\n" +
+            "- Only sessions for the same student are available for linking.\n" +
             "- Already-linked NM sessions are filtered out to prevent duplicate MU links.",
             "Makeup Selector Help",
             MessageBoxButton.OK,

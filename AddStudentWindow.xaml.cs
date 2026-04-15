@@ -4,11 +4,17 @@ namespace TherapyTime;
 
 public partial class AddStudentWindow : Window
 {
-    public string StudentName { get; private set; } = string.Empty;
+    public string FirstName { get; private set; } = string.Empty;
+    public string LastName { get; private set; } = string.Empty;
     public int MonthlyRequiredMinutes { get; private set; }
     public DateTime FutureAnnualReview { get; private set; }
     public DateTime NextThreeYearReevaluation { get; private set; }
     public DateTime? PastAnnualReview { get; private set; }
+    public string MainContactName { get; private set; } = string.Empty;
+    public string MainContactPhone { get; private set; } = string.Empty;
+    public string MainContactEmail { get; private set; } = string.Empty;
+    public bool PreferPhoneContact { get; private set; }
+    public bool PreferEmailContact { get; private set; }
 
     public AddStudentWindow()
     {
@@ -17,7 +23,7 @@ public partial class AddStudentWindow : Window
         FutureAnnualReviewPicker.SelectedDate = DateTime.Today;
         NextThreeYearReevaluationPicker.SelectedDate = DateTime.Today;
         PastAnnualReviewPicker.SelectedDate = DateTime.Today;
-        StudentNameTextBox.Focus();
+        FirstNameTextBox.Focus();
     }
 
     private void AddPastAnnualReviewCheckBox_Changed(object sender, RoutedEventArgs e)
@@ -27,10 +33,12 @@ public partial class AddStudentWindow : Window
 
     private void Add_Click(object sender, RoutedEventArgs e)
     {
-        string studentName = StudentNameTextBox.Text.Trim();
-        if (string.IsNullOrWhiteSpace(studentName))
+        string firstName = FirstNameTextBox.Text.Trim();
+        string lastName = LastNameTextBox.Text.Trim();
+
+        if (string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(lastName))
         {
-            MessageBox.Show("Student name is required.", "Missing Information", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("Student first and last names are required.", "Missing Information", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -58,13 +66,19 @@ public partial class AddStudentWindow : Window
             return;
         }
 
-        StudentName = studentName;
+        FirstName = firstName;
+        LastName = lastName;
         MonthlyRequiredMinutes = requiredMinutes;
         FutureAnnualReview = FutureAnnualReviewPicker.SelectedDate.Value.Date;
         NextThreeYearReevaluation = NextThreeYearReevaluationPicker.SelectedDate.Value.Date;
         PastAnnualReview = AddPastAnnualReviewCheckBox.IsChecked == true
             ? PastAnnualReviewPicker.SelectedDate?.Date
             : null;
+        MainContactName = MainContactNameTextBox.Text.Trim();
+        MainContactPhone = MainContactPhoneTextBox.Text.Trim();
+        MainContactEmail = MainContactEmailTextBox.Text.Trim();
+        PreferPhoneContact = PreferPhoneCheckBox.IsChecked == true;
+        PreferEmailContact = PreferEmailCheckBox.IsChecked == true;
 
         DialogResult = true;
     }
@@ -81,11 +95,13 @@ public partial class AddStudentWindow : Window
             "Purpose:\n" +
             "- Add a student with required therapy targets and compliance dates.\n\n" +
             "Required fields:\n" +
-            "- Student Name\n" +
+            "- Student First Name\n" +
+            "- Student Last Name\n" +
             "- Required Minutes\n" +
             "- Future Annual Review\n" +
             "- Next 3-Year Reevaluation\n\n" +
             "Optional field:\n" +
+            "- Main Contact details and preferences\n" +
             "- Past Annual Review\n\n" +
             "What it means:\n" +
             "- These dates are used for reminders and reporting in Statistics.\n" +

@@ -10,14 +10,16 @@ public partial class DailyViewWindow : Window
     private readonly DateTime _iepStart;
     private readonly DateTime _iepEnd;
     private DateTime _currentWeekStart; // always a Sunday
+    private readonly Action<Student>? _openStudentInfoAction;
 
-    public DailyViewWindow(List<Student> students, DateTime iepStart, DateTime iepEnd)
+    public DailyViewWindow(List<Student> students, DateTime iepStart, DateTime iepEnd, Action<Student>? openStudentInfoAction = null)
     {
         InitializeComponent();
 
         _students = students.OrderBy(s => s.Name).ToList();
         _iepStart = iepStart;
         _iepEnd = iepEnd;
+        _openStudentInfoAction = openStudentInfoAction;
 
         RangeText.Text = $"{iepStart:MM/dd/yyyy} – {iepEnd:MM/dd/yyyy}";
 
@@ -89,15 +91,23 @@ public partial class DailyViewWindow : Window
             var nameBorder = MakeBorder(
                 new SolidColorBrush(Color.FromRgb(249, 250, 251)),
                 new SolidColorBrush(Color.FromRgb(229, 231, 235)));
-            nameBorder.Child = new TextBlock
+            nameBorder.Child = new Button
             {
-                Text = student.Name,
+                Content = student.Name,
                 FontWeight = FontWeights.SemiBold,
                 FontSize = 13,
-                Foreground = new SolidColorBrush(Color.FromRgb(17, 24, 39)),
-                TextWrapping = TextWrapping.Wrap,
+                Foreground = new SolidColorBrush(Color.FromRgb(29, 78, 216)),
+                HorizontalContentAlignment = HorizontalAlignment.Left,
+                Background = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                ToolTip = student.StudentSummaryForTooltip,
+                Cursor = System.Windows.Input.Cursors.Hand,
                 VerticalAlignment = VerticalAlignment.Center
             };
+            if (nameBorder.Child is Button nameButton)
+            {
+                nameButton.Click += (_, __) => _openStudentInfoAction?.Invoke(student);
+            }
             Grid.SetRow(nameBorder, r + 1);
             Grid.SetColumn(nameBorder, 0);
             DailyGrid.Children.Add(nameBorder);

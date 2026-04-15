@@ -407,12 +407,27 @@ public partial class MainWindow : Window
             return;
         }
 
-        Student newStudent = new Student(addStudentWindow.StudentName)
+        string candidateName = $"{addStudentWindow.FirstName} {addStudentWindow.LastName}".Trim();
+        bool duplicateName = _allStudents.Any(s => string.Equals(s.Name.Trim(), candidateName, StringComparison.OrdinalIgnoreCase));
+        if (duplicateName)
         {
+            MessageBox.Show("A student with that name already exists. Please use a more descriptive name.", "Duplicate Student Name", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        Student newStudent = new Student
+        {
+            FirstName = addStudentWindow.FirstName,
+            LastName = addStudentWindow.LastName,
             MonthlyRequiredMinutes = addStudentWindow.MonthlyRequiredMinutes,
             TotalMinutesRequired = addStudentWindow.MonthlyRequiredMinutes,
             FutureAnnualReviews = new List<DateTime> { addStudentWindow.FutureAnnualReview },
-            NextThreeYearReevaluation = addStudentWindow.NextThreeYearReevaluation
+            NextThreeYearReevaluation = addStudentWindow.NextThreeYearReevaluation,
+            MainContactName = addStudentWindow.MainContactName,
+            MainContactPhone = addStudentWindow.MainContactPhone,
+            MainContactEmail = addStudentWindow.MainContactEmail,
+            PreferPhoneContact = addStudentWindow.PreferPhoneContact,
+            PreferEmailContact = addStudentWindow.PreferEmailContact
         };
 
         if (addStudentWindow.PastAnnualReview.HasValue)
@@ -423,67 +438,20 @@ public partial class MainWindow : Window
         _allStudents.Add(newStudent);
         SaveStudents();
         PopulateStudentMenus();
-        MessageBox.Show($"Student '{addStudentWindow.StudentName}' added.", "Info");
+        MessageBox.Show($"Student '{newStudent.Name}' added.", "Info");
     }
 
     private void PopulateStudentMenus()
     {
-        UpdateRequiredMinutesMenu.Items.Clear();
-        ArchiveStudentMenu.Items.Clear();
-        UnarchiveStudentMenu.Items.Clear();
         DeleteStudentMenu.Items.Clear();
 
-        var activeStudents = _allStudents.Where(s => !s.IsArchived).OrderBy(s => s.Name).ToList();
-        var archivedStudents = _allStudents.Where(s => s.IsArchived).OrderBy(s => s.Name).ToList();
         var allStudentsSorted = _allStudents.OrderBy(s => s.Name).ToList();
-
-        if (allStudentsSorted.Count == 0)
-        {
-            MenuItem updateEmptyItem = new MenuItem { Header = "(No students)" };
-            updateEmptyItem.IsEnabled = false;
-            UpdateRequiredMinutesMenu.Items.Add(updateEmptyItem);
-        }
-        else
-        {
-            foreach (var student in allStudentsSorted)
-            {
-                MenuItem updateMinutesItem = new MenuItem
-                {
-                    Header = student.IsArchived
-                        ? $"{student.Name} (Archived) ({student.TotalMinutesRequired} min)"
-                        : $"{student.Name} ({student.TotalMinutesRequired} min)",
-                    Tag = student
-                };
-                updateMinutesItem.Click += UpdateRequiredMinutes_Click;
-                UpdateRequiredMinutesMenu.Items.Add(updateMinutesItem);
-            }
-        }
 
         if (allStudentsSorted.Count == 0)
         {
             MenuItem deleteEmptyItem = new MenuItem { Header = "(No students)" };
             deleteEmptyItem.IsEnabled = false;
             DeleteStudentMenu.Items.Add(deleteEmptyItem);
-        }
-
-        if (activeStudents.Count == 0)
-        {
-            MenuItem emptyItem = new MenuItem { Header = "(No students)" };
-            emptyItem.IsEnabled = false;
-            ArchiveStudentMenu.Items.Add(emptyItem);
-        }
-        else
-        {
-            foreach (var student in activeStudents)
-            {
-                MenuItem studentItem = new MenuItem
-                {
-                    Header = student.Name,
-                    Tag = student
-                };
-                studentItem.Click += ArchiveStudent_Click;
-                ArchiveStudentMenu.Items.Add(studentItem);
-            }
         }
 
         if (allStudentsSorted.Count > 0)
@@ -499,26 +467,29 @@ public partial class MainWindow : Window
                 DeleteStudentMenu.Items.Add(deleteStudentItem);
             }
         }
+    }
 
-        if (archivedStudents.Count == 0)
+    private void OpenStudentInformation_Click(object sender, RoutedEventArgs e)
+    {
+        OpenStudentInformationWindow(null);
+    }
+
+    private void OpenStudentInformationWindow(Student? preselectedStudent)
+    {
+        if (_allStudents.Count == 0)
         {
-            MenuItem emptyItem = new MenuItem { Header = "(No archived students)" };
-            emptyItem.IsEnabled = false;
-            UnarchiveStudentMenu.Items.Add(emptyItem);
+            MessageBox.Show("No students available.", "Info");
+            return;
         }
-        else
+
+        var infoWindow = new StudentInformationWindow(_allStudents, SaveStudents, preselectedStudent)
         {
-            foreach (var student in archivedStudents)
-            {
-                MenuItem studentItem = new MenuItem
-                {
-                    Header = student.Name,
-                    Tag = student
-                };
-                studentItem.Click += UnarchiveStudent_Click;
-                UnarchiveStudentMenu.Items.Add(studentItem);
-            }
-        }
+            Owner = this
+        };
+
+        infoWindow.ShowDialog();
+        PopulateStudentMenus();
+        CreateButtonGrid();
     }
 
     private void UpdateRequiredMinutes_Click(object sender, RoutedEventArgs e)
@@ -652,7 +623,12 @@ public partial class MainWindow : Window
 
     private void About_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show("TherapyTime v1.0", "About");
+        var aboutWindow = new AboutWindow
+        {
+            Owner = this
+        };
+
+        aboutWindow.ShowDialog();
     }
 
     private void HelpBubble_Click(object sender, RoutedEventArgs e)
@@ -731,12 +707,33 @@ public partial class MainWindow : Window
             return;
         }
 
-        var statisticsWindow = new StatisticsWindow(_allStudents, _startDate, _endDate)
+        var statisticsWindow = new StatisticsWindow(_allStudents, _activeIepYear, false, OpenStudentInformationFromChildWindow)
         {
             Owner = this
         };
 
         statisticsWindow.ShowDialog();
+    }
+
+    private void ShowYearStatistics_Click(object sender, RoutedEventArgs e)
+    {
+        if (_allStudents.Count == 0)
+        {
+            MessageBox.Show("No students available for statistics.", "Info");
+            return;
+        }
+
+        var statisticsWindow = new StatisticsWindow(_allStudents, _activeIepYear, true, OpenStudentInformationFromChildWindow)
+        {
+            Owner = this
+        };
+
+        statisticsWindow.ShowDialog();
+    }
+
+    private void OpenStudentInformationFromChildWindow(Student student)
+    {
+        OpenStudentInformationWindow(student);
     }
 
     private void ShowDailyView_Click(object sender, RoutedEventArgs e)
@@ -747,7 +744,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var dailyViewWindow = new DailyViewWindow(_allStudents, _startDate, _endDate)
+        var dailyViewWindow = new DailyViewWindow(_allStudents, _startDate, _endDate, OpenStudentInformationFromChildWindow)
         {
             Owner = this
         };
@@ -763,7 +760,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var reviewDatesWindow = new ReviewDatesWindow(_allStudents)
+        var reviewDatesWindow = new ReviewDatesWindow(_allStudents, OpenStudentInformationFromChildWindow)
         {
             Owner = this
         };

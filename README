@@ -1,6 +1,6 @@
 # TherapyTime End-User Documentation
 
-TherapyTime is a desktop application used to manage student therapy sessions during an IEP period. It helps you:
+TherapyTime is a desktop application used to manage student therapy sessions during an IEP year. It helps you:
 
 - track planned and completed sessions,
 - monitor required versus completed minutes,
@@ -11,16 +11,17 @@ TherapyTime is a desktop application used to manage student therapy sessions dur
 
 When the app opens:
 
-1. You are prompted to create/open an IEP date range from the Welcome screen.
-2. The main calendar view loads for that IEP.
+1. You are prompted to create/open an IEP year from the Welcome screen.
+2. For new years, you configure all 12 IEP months with start/end dates.
+3. The main calendar view loads for the selected IEP month.
 3. A reminder popup appears for upcoming Annual Reviews and 3-Year Reevaluations in the next 30 days.
 
 ### Data Storage
 
 TherapyTime stores data in two logical places:
 
-- Core student data (name, archive status, monthly required minutes, review dates)
-- IEP-specific data (sessions and IEP required/received totals)
+- Core student data (first/last name, archive status, monthly required minutes, review dates, main contact)
+- IEP-year data (12 IEP month ranges and IEP-year-specific sessions/totals)
 
 This allows student identity and long-term dates to persist across multiple IEP files.
 
@@ -35,29 +36,29 @@ The top menu contains:
 
 ### File Menu
 
-- New/Open IEP: Create a new IEP period or open an existing IEP file.
-- Save IEP: Save all current changes.
+- New/Open IEP Year: Create a new IEP year or open an existing year file.
+- Save IEP Year: Save all current changes.
 - Exit: Close the application.
 
 ### Student Menu
 
 - Add Session
 - New Student
-- Update Required Minutes
-- Archive Student
-- Unarchive Student
+- View/Update Student Information
 - Delete Student
 
 ### Statistics Menu
 
-- Student Minutes and Sessions (Current IEP)
+- Student Minutes and Sessions (Selected IEP Month)
+- Year Statistics (Current IEP Year)
 - Daily View (Current IEP)
 - Review and Reevaluation Dates
 
 ### Help Menu
 
 - Documentation: Opens the GitHub README in your browser.
-- About: Shows app version information.
+- Report Issue: Opens the GitHub issues page.
+- About: Shows Developer (Dakota Stephens), Company (Nerd Brothers LLC), and app version.
 
 ## 2.1 In-Window Help Bubbles
 
@@ -72,11 +73,11 @@ Every window now includes a `?` help bubble in the top area.
 
 Window-by-window help coverage:
 
-- Welcome: creating new IEPs vs opening existing IEPs, date range and overlap behavior.
+- Welcome: creating/opening IEP years and 12-month setup behavior.
 - Main Calendar: menu usage, day-button meaning, and completion color indicators.
-- Add Student: required vs optional fields and how review/reevaluation dates are used.
+- Add Student: first/last name, duplicate prevention, optional contact info, and required fields.
 - Add Session: field meanings, IEP range checks, and overlap checks.
-- Edit Day Sessions: grid actions, completion workflow, MU/NM linking, and save options.
+- Edit Day Sessions: grid actions, completion workflow, MU/NM linking (same student only), and save options.
 - Session Notes: editable vs read-only notes behavior.
 - Makeup Session Selector: how to choose an NM session for MU linking.
 - Student Minutes and Sessions: metric meanings and status color interpretation.
@@ -105,29 +106,40 @@ Open Student -> New Student.
 
 Required fields:
 
-- Student Name
+- Student First Name
+- Student Last Name
 - Required Minutes
 - Future Annual Review date
 - Next 3-Year Reevaluation date
 
 Optional field:
 
+- Main Contact Name
+- Main Contact Phone and/or Email
+- Preferred contact method (phone and/or email)
 - Past Annual Review date
 
 After saving, the student is immediately available for scheduling.
 
-### 4.2 Update Required Minutes
+### 4.2 View/Update Student Information
 
-Open Student -> Update Required Minutes and choose a student.
+Open Student -> View/Update Student Information.
 
-This updates the student's required minutes target used in current statistics and balancing.
+From this page you can:
 
-### 4.3 Archive / Unarchive Student
+- edit first/last name
+- edit monthly required minutes
+- archive/unarchive the student
+- edit main contact details and communication preference
+- review a session history tree grouped by year and month
 
-- Archive removes the student from Add Session lists while keeping historical data.
-- Unarchive makes the student active again.
+Buttons:
 
-### 4.4 Delete Student
+- Save
+- Save and Exit
+- Cancel
+
+### 4.3 Delete Student
 
 Delete permanently removes the student from the current dataset. If sessions exist in the IEP range, a detailed warning is shown first.
 
@@ -147,7 +159,7 @@ You select:
 
 Validation rules include:
 
-- Date must fall within the IEP range.
+- Date must fall within the active IEP year range.
 - Session time cannot overlap an existing session on that same day (global conflict check across all students).
 
 ### 5.2 Edit Sessions for a Day
@@ -182,7 +194,31 @@ Current rule behavior:
 
 ## 6. Statistics Views
 
-### 6.1 Student Minutes and Sessions (Current IEP)
+### 6.1 Student Minutes and Sessions (Selected IEP Month)
+
+This monthly view is based on the selected IEP month only.
+
+Per-student expandable cards provide:
+
+- Needed minutes (monthly target)
+- Required-to-date (for selected month)
+- Completed minutes
+- Scheduled minutes
+- Excused minutes
+- Remaining minutes
+- Therapy balance
+
+Each student card includes a session table for only the selected month.
+
+### 6.2 Year Statistics (Current IEP Year)
+
+This year view shows values as of the current date in the active IEP year.
+
+- Required-to-date is calculated from year progress and monthly required minutes.
+- Completed/scheduled/excused values include sessions up to current date.
+- Helps determine whether each student is on track for the year.
+
+### 6.3 Daily View (Current IEP)
 
 Per-student expandable cards provide:
 
@@ -195,8 +231,6 @@ Per-student expandable cards provide:
 - Therapy balance
 
 Each student card includes a session table with color-coded row status.
-
-### 6.2 Daily View (Current IEP)
 
 Shows a weekly matrix:
 
@@ -212,7 +246,7 @@ Color behavior:
 
 Use week navigation arrows to move backward/forward within IEP weeks.
 
-### 6.3 Review and Reevaluation Dates
+### 6.4 Review and Reevaluation Dates
 
 Lists all students sorted by name with columns for:
 
@@ -239,7 +273,7 @@ If matches exist, a reminder popup lists the dates and students.
 2. Add students with required review/reevaluation dates.
 3. Add sessions from Student -> Add Session.
 4. Click calendar days to update completion status.
-5. Save regularly using File -> Save IEP.
+5. Save regularly using File -> Save IEP Year.
 6. Review progress under Statistics views.
 
 ## 9. Troubleshooting

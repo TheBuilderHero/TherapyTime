@@ -1,13 +1,17 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 
 namespace TherapyTime;
 
 public partial class ReviewDatesWindow : Window
 {
-    public ReviewDatesWindow(List<Student> students)
+    private readonly Action<Student>? _openStudentInfoAction;
+
+    public ReviewDatesWindow(List<Student> students, Action<Student>? openStudentInfoAction = null)
     {
         InitializeComponent();
+        _openStudentInfoAction = openStudentInfoAction;
 
         DateTime today = DateTime.Today;
         DateTime reminderEnd = today.AddDays(30);
@@ -34,6 +38,14 @@ public partial class ReviewDatesWindow : Window
             MessageBoxButton.OK,
             MessageBoxImage.Information);
     }
+
+    private void StudentName_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.Tag is not Student student)
+            return;
+
+        _openStudentInfoAction?.Invoke(student);
+    }
 }
 
 public class ReviewDatesViewModel
@@ -43,7 +55,9 @@ public class ReviewDatesViewModel
 
     public ReviewDatesViewModel(Student student, DateTime today, DateTime reminderEnd)
     {
+        StudentRef = student;
         StudentName = student.Name;
+        StudentToolTip = student.StudentSummaryForTooltip;
         PastAnnualReviewsText = student.PastAnnualReviews.Count == 0
             ? "-"
             : string.Join(", ", student.PastAnnualReviews.OrderBy(date => date).Select(date => date.ToString("MM/dd/yyyy")));
@@ -73,7 +87,9 @@ public class ReviewDatesViewModel
         }
     }
 
+    public Student StudentRef { get; }
     public string StudentName { get; }
+    public string StudentToolTip { get; }
     public string PastAnnualReviewsText { get; }
     public string FutureAnnualReviewsText { get; }
     public Brush FutureAnnualReviewsBrush { get; }

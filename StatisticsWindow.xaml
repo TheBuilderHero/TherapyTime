@@ -25,8 +25,12 @@
         <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#D0D7DE" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
             <StackPanel>
                 <TextBlock Text="Student Minutes and Sessions" FontSize="20" FontWeight="Bold" Foreground="#1F2937"/>
-                <TextBlock Text="Current IEP range" FontSize="12" Foreground="#6B7280" Margin="0,4,0,0"/>
+                <TextBlock x:Name="ModeText" Text="Selected IEP month" FontSize="12" Foreground="#6B7280" Margin="0,4,0,0"/>
                 <TextBlock x:Name="RangeText" FontSize="13" FontWeight="SemiBold" Foreground="#374151"/>
+                <StackPanel x:Name="MonthSelectorPanel" Orientation="Horizontal" Margin="0,8,0,0">
+                    <TextBlock Text="IEP Month:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox x:Name="MonthComboBox" Width="320" SelectionChanged="MonthComboBox_SelectionChanged"/>
+                </StackPanel>
             </StackPanel>
         </Border>
 
@@ -39,12 +43,20 @@
                                 <Border Padding="10,8,10,8" Background="#F9FAFB" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1">
                                     <StackPanel>
                                         <DockPanel LastChildFill="False">
-                                            <TextBlock Text="{Binding StudentName}"
-                                                       FontSize="20"
-                                                       FontWeight="Bold"
-                                                       Foreground="#111827"
-                                                       VerticalAlignment="Center"
-                                                       DockPanel.Dock="Left"/>
+                                            <Button Content="{Binding StudentName}"
+                                                    FontSize="20"
+                                                    FontWeight="Bold"
+                                                    Foreground="#1D4ED8"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Cursor="Hand"
+                                                    Padding="0"
+                                                    HorizontalContentAlignment="Left"
+                                                    VerticalAlignment="Center"
+                                                    DockPanel.Dock="Left"
+                                                    ToolTip="{Binding StudentToolTip}"
+                                                    Tag="{Binding StudentRef}"
+                                                    Click="StudentName_Click"/>
                                             <Border Background="{Binding StatusBrush}" CornerRadius="12" Padding="10,4" HorizontalAlignment="Right" DockPanel.Dock="Right">
                                                 <TextBlock Text="{Binding StatusText}" Foreground="#111827" FontWeight="SemiBold"/>
                                             </Border>

@@ -23,6 +23,9 @@ public partial class MainWindow : Window
     private int dayMax = 30; // fallback total number of days when end date is missing
     private DateTime _startDate;
     private DateTime _endDate;
+    private DateTime _currentMonthStart;
+    private DateTime _currentMonthEnd;
+    private IepYearFile _activeIepYear = new IepYearFile();
     private string _studentFilePath = string.Empty;
     private string _persistentStudentsPath = string.Empty;
     private List<Student> _allStudents = new List<Student>();
@@ -36,11 +39,14 @@ public partial class MainWindow : Window
         {
             _startDate = welcomeWindow.getStartDate();
             _endDate = welcomeWindow.getEndDate();
+            _activeIepYear = welcomeWindow.getIepYearFile() ?? IepYearFileManager.CreateYear(IepYearFileManager.InferSchoolYear(_startDate), IepYearFileManager.BuildDefaultMonths(IepYearFileManager.InferSchoolYear(_startDate)));
             _studentFilePath = DataHandler.GetDataFilePath(welcomeWindow.getSaveFileName());
             _persistentStudentsPath = DataHandler.GetPersistentStudentsFilePath();
 
             // Load students using the new dual persistence model
             LoadStudentsWithIepData();
+
+            PopulateIepMonthSelector();
 
             // Update the window title with the IEP filename
             string iepFileName = System.IO.Path.GetFileName(_studentFilePath);
@@ -66,12 +72,23 @@ public partial class MainWindow : Window
             coreStudents = StudentManager.LoadCoreDataFromJson(File.ReadAllText(_persistentStudentsPath));
         }
 
-        // Load IEP-specific data
+        // Load IEP-specific data and year metadata
         var iepData = new List<StudentIepData>();
         if (File.Exists(_studentFilePath))
         {
             iepJsonText = File.ReadAllText(_studentFilePath);
-            iepData = StudentManager.LoadIepDataFromJson(iepJsonText);
+
+            if (IepYearFileManager.TryLoadFromJson(iepJsonText, out IepYearFile? yearFile) && yearFile != null)
+            {
+                _activeIepYear = yearFile;
+                _startDate = yearFile.SchoolYearStartDate;
+                _endDate = yearFile.SchoolYearEndDate;
+                iepData = yearFile.Students ?? new List<StudentIepData>();
+            }
+            else
+            {
+                iepData = StudentManager.LoadIepDataFromJson(iepJsonText);
+            }
         }
 
         // Backward compatibility: older IEP files stored full Student objects.
@@ -99,16 +116,48 @@ public partial class MainWindow : Window
         }
     }
 
+    private void PopulateIepMonthSelector()
+    {
+        var months = _activeIepYear.Months
+            .OrderBy(m => m.StartDate)
+            .ToList();
+
+        if (months.Count == 0)
+        {
+            months = IepYearFileManager.BuildDefaultMonths(_activeIepYear.SchoolYear == 0 ? IepYearFileManager.InferSchoolYear(DateTime.Today) : _activeIepYear.SchoolYear);
+            _activeIepYear.Months = months;
+            _startDate = months.Min(m => m.StartDate);
+            _endDate = months.Max(m => m.EndDate);
+        }
+
+        IepMonthComboBox.ItemsSource = months;
+
+        var todayMonth = months.FirstOrDefault(m => DateTime.Today.Date >= m.StartDate.Date && DateTime.Today.Date <= m.EndDate.Date);
+        IepMonthComboBox.SelectedItem = todayMonth ?? months.First();
+    }
+
+    private void IepMonthComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (IepMonthComboBox.SelectedItem is not IepMonthDefinition month)
+            return;
+
+        _currentMonthStart = month.StartDate.Date;
+        _currentMonthEnd = month.EndDate.Date;
+        CreateButtonGrid();
+    }
+
     private void CreateButtonGrid()
     {
         panelGrid.Children.Clear();
 
-        DateTime startDate = _startDate;
-        int totalDays = (_endDate - startDate).Days + 1;
+        DateTime startDate = _currentMonthStart == default ? _startDate : _currentMonthStart;
+        DateTime endDate = _currentMonthEnd == default ? _endDate : _currentMonthEnd;
+
+        int totalDays = (endDate - startDate).Days + 1;
         if (totalDays < 1)
         {
             totalDays = dayMax;
-            _endDate = startDate.AddDays(dayMax - 1);
+            endDate = startDate.AddDays(dayMax - 1);
         }
 
         // Calculate what day of the week the start date is (0=Sunday)
@@ -293,30 +342,32 @@ public partial class MainWindow : Window
         }
     }
 
-// --- New IEP ---
+// --- New IEP Year ---
     private void NewIEP_Click(object sender, RoutedEventArgs e)
     {
         // Confirm with user
-        if (MessageBox.Show("Start a new IEP? This will clear current data and return to the Welcome screen.", "Confirm", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+        if (MessageBox.Show("Open another IEP year? Unsaved changes should be saved first.", "Confirm", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
         {
             Welcome welcomeWindow = new Welcome();
             if (welcomeWindow.ShowDialog() == true)
             {
                 _startDate = welcomeWindow.getStartDate();
                 _endDate = welcomeWindow.getEndDate();
+                _activeIepYear = welcomeWindow.getIepYearFile() ?? IepYearFileManager.CreateYear(IepYearFileManager.InferSchoolYear(_startDate), IepYearFileManager.BuildDefaultMonths(IepYearFileManager.InferSchoolYear(_startDate)));
                 _studentFilePath = DataHandler.GetDataFilePath(welcomeWindow.getSaveFileName());
                 _persistentStudentsPath = DataHandler.GetPersistentStudentsFilePath();
 
                 // Load students using the new dual persistence model
                 LoadStudentsWithIepData();
+                PopulateIepMonthSelector();
 
                 if (_allStudents.Count > 0)
                 {
-                    MessageBox.Show($"IEP loaded with {_allStudents.Count} students.", "Info");
+                    MessageBox.Show($"IEP year loaded with {_allStudents.Count} students.", "Info");
                 }
                 else
                 {
-                    MessageBox.Show("New IEP created.", "Info");
+                    MessageBox.Show("New IEP year created.", "Info");
                 }
 
                 // Update the window title with the IEP filename
@@ -335,11 +386,11 @@ public partial class MainWindow : Window
         try
         {
             SaveStudents();
-            MessageBox.Show("IEP saved successfully.", "Info");
+            MessageBox.Show("IEP year saved successfully.", "Info");
         }
         catch (Exception ex)
         {
-            MessageBox.Show("Failed to save IEP: " + ex.Message, "Error");
+            MessageBox.Show("Failed to save IEP year: " + ex.Message, "Error");
         }
     }
 
@@ -513,7 +564,7 @@ public partial class MainWindow : Window
                 $"- {s.Date:MM/dd/yyyy} {DateTime.Today.Add(s.TimeOfDay):hh:mm tt} ({s.Minutes} min, {s.Code})"));
 
             var warningResult = MessageBox.Show(
-                $"Deleting {student.Name} will permanently remove all their sessions in this IEP range.\n\n" +
+                $"Deleting {student.Name} will permanently remove all their sessions in this IEP year range.\n\n" +
                 "Sessions that will be deleted:\n" +
                 $"{sessionList}\n\n" +
                 "Do you want to continue?",
@@ -648,6 +699,30 @@ public partial class MainWindow : Window
         }
     }
 
+    private void ReportIssue_Click(object sender, RoutedEventArgs e)
+    {
+        const string issueUrl = "https://github.com/TheBuilderHero/TherapyTime/issues";
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = issueUrl,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                "Unable to open issue tracker link.\n\n" +
+                issueUrl + "\n\n" +
+                "Error: " + ex.Message,
+                "Open Issue Tracker Failed",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+    }
+
     private void ShowStudentStatistics_Click(object sender, RoutedEventArgs e)
     {
         if (_allStudents.Count == 0)
@@ -747,9 +822,25 @@ public partial class MainWindow : Window
 
     private void SaveStudents()
     {
-        // Save IEP-specific data to the IEP file
-        string iepJson = StudentManager.SaveIepDataToJson(_allStudents);
-        File.WriteAllText(_studentFilePath, iepJson);
+        // Save IEP-year metadata and IEP-specific student data in one file
+        _activeIepYear.Students = _allStudents.Select(s => new StudentIepData
+        {
+            Id = s.Id,
+            Sessions = s.Sessions,
+            TotalMinutesReceived = s.TotalMinutesReceived,
+            TotalMinutesRequired = s.TotalMinutesRequired
+        }).ToList();
+
+        if (_activeIepYear.Months.Count == 0)
+        {
+            _activeIepYear.Months = IepYearFileManager.BuildDefaultMonths(_activeIepYear.SchoolYear == 0 ? IepYearFileManager.InferSchoolYear(_startDate) : _activeIepYear.SchoolYear);
+        }
+
+        _activeIepYear.SchoolYearStartDate = _activeIepYear.Months.Min(m => m.StartDate).Date;
+        _activeIepYear.SchoolYearEndDate = _activeIepYear.Months.Max(m => m.EndDate).Date;
+
+        string iepYearJson = IepYearFileManager.SaveToJson(_activeIepYear);
+        File.WriteAllText(_studentFilePath, iepYearJson);
 
         // Save core student data to persistent file
         SaveCoreStudentData();

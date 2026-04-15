@@ -1,6 +1,4 @@
 using System;
-using System.Collections;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -11,14 +9,14 @@ public partial class Welcome : Window
     private DateTime _startDate;
     private DateTime _endDate;
     private string _saveFileName = string.Empty;
-    private const int DefaultIepDays = 30;
+    private IepYearFile? _selectedIepYear;
 
     public Welcome()
     {
-        InitializeComponent(); // This "sews" the XAML and C# together
-        IEPStartDate.SelectedDate = DateTime.Today;
-        IEPEndDate.SelectedDate = DateTime.Today.AddDays(DefaultIepDays - 1);
-        UpdateDefaultFileName();
+        InitializeComponent();
+
+        int suggestedSchoolYear = IepYearFileManager.InferSchoolYear(DateTime.Today);
+        SchoolYearTextBox.Text = suggestedSchoolYear.ToString();
     }
 
     private void NewButton_Click(object sender, RoutedEventArgs e)
@@ -48,9 +46,16 @@ public partial class Welcome : Window
                 return;
             }
 
-            var jsonFiles = Directory.GetFiles(appFolderPath, "*.json")
+            var jsonFiles = Directory.GetFiles(appFolderPath, "IEP_Year_*.json")
                 .Where(f => !Path.GetFileName(f).Equals("students.json", StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(f => File.GetLastWriteTime(f));
+
+            if (!jsonFiles.Any())
+            {
+                jsonFiles = Directory.GetFiles(appFolderPath, "*.json")
+                    .Where(f => !Path.GetFileName(f).Equals("students.json", StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(f => File.GetLastWriteTime(f));
+            }
 
             foreach (var filePath in jsonFiles)
             {
@@ -82,17 +87,35 @@ public partial class Welcome : Window
         string appFolderPath = Path.Combine(appDataPath, "TherapyTime");
         string filePath = Path.Combine(appFolderPath, selectedFileName);
 
-        // Extract dates from filename to populate _startDate and _endDate
-        if (TryParseIEPFileName(Path.GetFileNameWithoutExtension(selectedFileName), out DateTime start, out DateTime end))
+        if (File.Exists(filePath) && IepYearFileManager.TryLoadFromJson(File.ReadAllText(filePath), out IepYearFile? yearFile) && yearFile != null)
         {
-            _startDate = start;
-            _endDate = end;
+            _selectedIepYear = yearFile;
+            _startDate = yearFile.SchoolYearStartDate;
+            _endDate = yearFile.SchoolYearEndDate;
+            _saveFileName = selectedFileName;
+            this.DialogResult = true;
+        }
+        else if (TryParseLegacyIepFileName(Path.GetFileNameWithoutExtension(selectedFileName), out DateTime legacyStart, out DateTime legacyEnd))
+        {
+            int inferredYear = IepYearFileManager.InferSchoolYear(legacyStart);
+            _selectedIepYear = IepYearFileManager.CreateYear(inferredYear, new List<IepMonthDefinition>
+            {
+                new IepMonthDefinition
+                {
+                    Name = $"Legacy Range ({legacyStart:MM/dd/yyyy}-{legacyEnd:MM/dd/yyyy})",
+                    StartDate = legacyStart.Date,
+                    EndDate = legacyEnd.Date
+                }
+            });
+
+            _startDate = legacyStart.Date;
+            _endDate = legacyEnd.Date;
             _saveFileName = selectedFileName;
             this.DialogResult = true;
         }
         else
         {
-            MessageBox.Show("Unable to parse the IEP file name. Please use the correct format.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("Unable to load the selected IEP year file.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -103,132 +126,28 @@ public partial class Welcome : Window
 
     private void Submit_Click(object sender, RoutedEventArgs e)
     {
-        _startDate = IEPStartDate.SelectedDate ?? DateTime.Today;
-        _endDate = IEPEndDate.SelectedDate ?? _startDate.AddDays(DefaultIepDays - 1);
-
-        if (_endDate < _startDate)
+        if (!int.TryParse(SchoolYearTextBox.Text, out int schoolYear) || schoolYear < 2000 || schoolYear > 3000)
         {
-            MessageBox.Show("End date must be the same as or after the start date.", "Invalid Date Range", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("Enter a valid school year (example: 2025).", "Invalid School Year", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        // Check for overlapping IEPs
-        if (CheckForOverlappingIEPs(_startDate, _endDate))
+        var setupWindow = new IepYearSetupWindow(schoolYear)
         {
-            MessageBoxResult result = MessageBox.Show(
-                "The selected date range overlaps with an existing IEP. This may cause data conflicts or confusion.\n\nAre you absolutely sure you want to proceed?",
-                "Overlapping IEP Warning",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-            
-            if (result != MessageBoxResult.Yes)
-            {
-                return;
-            }
+            Owner = this
+        };
+
+        if (setupWindow.ShowDialog() != true || setupWindow.ConfiguredYear == null)
+        {
+            return;
         }
 
-        _saveFileName = GetDefaultFileName(_startDate, _endDate);
+        _selectedIepYear = setupWindow.ConfiguredYear;
+        _startDate = _selectedIepYear.SchoolYearStartDate;
+        _endDate = _selectedIepYear.SchoolYearEndDate;
+        _saveFileName = IepYearFileManager.GetFileName(_selectedIepYear.SchoolYear);
 
         this.DialogResult = true;
-    }
-
-    private static bool CheckForOverlappingIEPs(DateTime newStart, DateTime newEnd)
-    {
-        try
-        {
-            string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            string appFolderPath = Path.Combine(appDataPath, "TherapyTime");
-
-            if (!Directory.Exists(appFolderPath))
-                return false;
-
-            var jsonFiles = Directory.GetFiles(appFolderPath, "*.json")
-                .Where(f => !Path.GetFileName(f).Equals("students.json", StringComparison.OrdinalIgnoreCase));
-
-            foreach (var file in jsonFiles)
-            {
-                string fileName = Path.GetFileNameWithoutExtension(file);
-                
-                // Try to parse the filename as a date range (yyyy-MM-dd_yyyy-MM-dd)
-                if (TryParseIEPFileName(fileName, out DateTime existingStart, out DateTime existingEnd))
-                {
-                    // Check if ranges overlap
-                    if (newStart <= existingEnd && newEnd >= existingStart)
-                    {
-                        return true; // Overlap detected
-                    }
-                }
-            }
-
-            return false; // No overlaps found
-        }
-        catch
-        {
-            return false; // If any error, allow the operation
-        }
-    }
-
-    private static bool TryParseIEPFileName(string fileName, out DateTime start, out DateTime end)
-    {
-        start = default;
-        end = default;
-
-        var parts = fileName.Split('_');
-        if (parts.Length != 2)
-            return false;
-
-        if (DateTime.TryParseExact(parts[0], "yyyy-MM-dd", null, DateTimeStyles.None, out start) &&
-            DateTime.TryParseExact(parts[1], "yyyy-MM-dd", null, DateTimeStyles.None, out end))
-        {
-            return true;
-        }
-
-        return false;
-    }
-
-    private void IEPStartDate_SelectedDateChanged(object sender, RoutedEventArgs e)
-    {
-        // When start date changes, automatically set end date to 30 days later
-        DateTime? startDate = IEPStartDate.SelectedDate;
-        if (startDate.HasValue)
-        {
-            IEPEndDate.SelectedDate = startDate.Value.AddDays(DefaultIepDays - 1);
-        }
-
-        UpdateDefaultFileName();
-    }
-
-    private void IEPEndDate_SelectedDateChanged(object sender, RoutedEventArgs e)
-    {
-        UpdateDefaultFileName();
-    }
-
-    private void UpdateDefaultFileName()
-    {
-        _startDate = IEPStartDate.SelectedDate ?? DateTime.Today;
-        _endDate = IEPEndDate.SelectedDate ?? _startDate.AddDays(DefaultIepDays - 1);
-        // filename is auto-generated from dates; no textbox to update
-    }
-
-    private static string GetDefaultFileName(DateTime start, DateTime end)
-    {
-        return $"{start:yyyy-MM-dd}_{end:yyyy-MM-dd}.json";
-    }
-
-    private static string NormalizeFileName(string name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            return string.Empty;
-
-        foreach (var c in Path.GetInvalidFileNameChars())
-        {
-            name = name.Replace(c, '_');
-        }
-
-        if (!name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-            name += ".json";
-
-        return name;
     }
 
     public DateTime getStartDate()
@@ -246,7 +165,28 @@ public partial class Welcome : Window
         if (!string.IsNullOrEmpty(_saveFileName))
             return _saveFileName;
 
-        return GetDefaultFileName(_startDate, _endDate);
+        int schoolYear = _selectedIepYear?.SchoolYear ?? IepYearFileManager.InferSchoolYear(_startDate == default ? DateTime.Today : _startDate);
+        return IepYearFileManager.GetFileName(schoolYear);
+    }
+
+    public IepYearFile? getIepYearFile()
+    {
+        return _selectedIepYear;
+    }
+
+    private static bool TryParseLegacyIepFileName(string fileNameWithoutExtension, out DateTime start, out DateTime end)
+    {
+        start = default;
+        end = default;
+
+        var parts = fileNameWithoutExtension.Split('_');
+        if (parts.Length != 2)
+            return false;
+
+        if (!DateTime.TryParse(parts[0], out start) || !DateTime.TryParse(parts[1], out end))
+            return false;
+
+        return end.Date >= start.Date;
     }
 
     public void setStartDate(DateTime startDate)
@@ -259,13 +199,13 @@ public partial class Welcome : Window
         MessageBox.Show(
             "Welcome Window Help\n\n" +
             "Purpose:\n" +
-            "- Start a new IEP date range or open an existing IEP file.\n\n" +
+            "- Create a new IEP year or open an existing IEP year file.\n\n" +
             "How to use this window:\n" +
-            "- Create New IEP: pick start/end dates, then click Create.\n" +
-            "- Open Existing IEP: switch to Open Existing IEP, select a file, then click Open (or double-click).\n\n" +
+            "- Create New IEP Year: enter the school year, then configure all 12 IEP month date ranges.\n" +
+            "- Open Existing IEP Year: select a file and click Open (or double-click).\n\n" +
             "What it means:\n" +
-            "- The file name is generated from the date range (yyyy-MM-dd_yyyy-MM-dd.json).\n" +
-            "- Overlap warnings appear if the new range intersects an existing IEP range.",
+            "- Year files are saved as IEP_Year_####.json.\n" +
+            "- The file stores the 12 IEP month ranges and that year's IEP session data.",
             "Welcome Help",
             MessageBoxButton.OK,
             MessageBoxImage.Information);

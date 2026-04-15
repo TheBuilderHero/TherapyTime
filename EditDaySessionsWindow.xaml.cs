@@ -393,7 +393,7 @@ public partial class EditDaySessionsWindow : Window
                 }
 
                 // Open popup to select NM session for linking (no change to NM)
-                var selector = new MakeupSessionSelectorWindow(row.Student, row);
+                var selector = new MakeupSessionSelectorWindow(row.Student, _iepStartDate, _iepEndDate, _date, row);
                 if (selector.ShowDialog() == true && selector.SelectedSession != null)
                 {
                     row.LinkedSessionId = selector.SelectedSession.Id;

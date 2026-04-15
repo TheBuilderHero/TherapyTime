@@ -42,7 +42,7 @@
                             Margin="0,0,0,20"
                             HorizontalAlignment="Center">
                     <Button x:Name="NewButton"
-                            Content="Create New IEP"
+                            Content="Create New IEP Year"
                             Width="200"
                             Height="40"
                             Background="#4CAF50"
@@ -75,7 +75,7 @@
                         </Button.Style>
                     </Button>
                     <Button x:Name="OpenButton"
-                            Content="Open Existing IEP"
+                            Content="Open Existing IEP Year"
                             Width="200"
                             Height="40"
                             Background="#2196F3"
@@ -108,37 +108,29 @@
                     </Button>
                 </StackPanel>
 
-                <!-- Panel for Creating New IEP -->
+                <!-- Panel for Creating New IEP Year -->
                 <StackPanel x:Name="NewPanel" Visibility="Visible">
-                    <!-- Label -->
-                    <TextBlock Text="Pick Start Date for IEP"
+                    <TextBlock Text="School Year Start (YYYY)"
                                FontSize="14"
                                Foreground="#555"
                                Margin="0,0,0,5"/>
 
-                    <!-- DatePicker -->
-                    <DatePicker x:Name="IEPStartDate"
-                                Height="35"
-                                Margin="0,0,0,20"
-                                Background="#F0F2F5"
-                                BorderBrush="#D0D5DD"
-                                SelectedDateChanged="IEPStartDate_SelectedDateChanged"/>
+                    <TextBox x:Name="SchoolYearTextBox"
+                             Height="35"
+                             Margin="0,0,0,20"
+                             Background="#F0F2F5"
+                             BorderBrush="#D0D5DD"
+                             VerticalContentAlignment="Center"/>
 
-                    <TextBlock Text="Pick End Date for IEP"
+                    <TextBlock Text="You will configure all 12 IEP months (start/end dates) in the next step."
                                FontSize="14"
                                Foreground="#555"
-                               Margin="0,0,0,5"/>
-
-                    <DatePicker x:Name="IEPEndDate"
-                                Height="35"
-                                Margin="0,0,0,20"
-                                Background="#F0F2F5"
-                                BorderBrush="#D0D5DD"
-                                SelectedDateChanged="IEPEndDate_SelectedDateChanged"/>
+                               Margin="0,0,0,20"
+                               TextWrapping="Wrap"/>
 
                     <!-- Submit Button for New -->
                     <Button x:Name="SubmitNew"
-                            Content="Create"
+                            Content="Configure and Create"
                             Height="40"
                             Background="#4CAF50"
                             Foreground="White"
@@ -170,9 +162,9 @@
                     </Button>
                 </StackPanel>
 
-                <!-- Panel for Opening Existing IEP -->
+                <!-- Panel for Opening Existing IEP Year -->
                 <StackPanel x:Name="OpenPanel" Visibility="Collapsed">
-                    <TextBlock Text="Select an existing IEP:"
+                    <TextBlock Text="Select an existing IEP year file:"
                                FontSize="14"
                                Foreground="#555"
                                Margin="0,0,0,10"/>

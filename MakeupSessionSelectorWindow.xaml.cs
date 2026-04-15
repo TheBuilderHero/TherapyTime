@@ -8,7 +8,7 @@ public partial class MakeupSessionSelectorWindow : Window
 {
     public Session? SelectedSession { get; private set; }
 
-    public MakeupSessionSelectorWindow(Student student, EditDaySessionsWindow.EditableSession? currentMuSession = null)
+    public MakeupSessionSelectorWindow(Student student, DateTime iepYearStartDate, DateTime iepYearEndDate, DateTime currentSessionDate, EditDaySessionsWindow.EditableSession? currentMuSession = null)
     {
         InitializeComponent();
 
@@ -17,8 +17,16 @@ public partial class MakeupSessionSelectorWindow : Window
             .Select(s => s.LinkedSessionId!)
             .ToHashSet();
 
+        DateTime maxAllowedDate = currentSessionDate.Date <= iepYearEndDate.Date
+            ? currentSessionDate.Date
+            : iepYearEndDate.Date;
+
         var nmSessions = student.Sessions
-            .Where(s => s.Code == SessionCode.NM && !linkedNmSessionIdsByOthers.Contains(s.Id))
+            .Where(s =>
+                s.Code == SessionCode.NM
+                && !linkedNmSessionIdsByOthers.Contains(s.Id)
+                && s.Date.Date >= iepYearStartDate.Date
+                && s.Date.Date <= maxAllowedDate)
             .OrderBy(s => s.SessionDateTime)
             .ToList();
 
@@ -46,6 +54,7 @@ public partial class MakeupSessionSelectorWindow : Window
             "- Select one NM session from the list and click OK.\n" +
             "- Click Cancel to close without linking.\n\n" +
             "What list behavior means:\n" +
+            "- Only NM sessions from the current IEP year up to the current MU session date are shown.\n" +
             "- Already-linked NM sessions are filtered out to prevent duplicate MU links.",
             "Makeup Selector Help",
             MessageBoxButton.OK,

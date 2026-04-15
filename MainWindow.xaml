@@ -19,8 +19,8 @@
         <!-- Menu Bar -->
         <Menu Grid.Row="0">
             <MenuItem Header="_File">
-                <MenuItem Header="New/Open IEP" Click="NewIEP_Click"/>
-                <MenuItem Header="Save IEP" Click="SaveIEP_Click"/>
+                <MenuItem Header="New/Open IEP Year" Click="NewIEP_Click"/>
+                <MenuItem Header="Save IEP Year" Click="SaveIEP_Click"/>
                 <Separator/>
                 <MenuItem Header="Exit" Click="Exit_Click"/>
             </MenuItem>
@@ -36,13 +36,14 @@
             </MenuItem>
 
             <MenuItem Header="_Statistics">
-                <MenuItem Header="Student Minutes and Sessions (Current IEP)" Click="ShowStudentStatistics_Click"/>
-                <MenuItem Header="Daily View (Current IEP)" Click="ShowDailyView_Click"/>
+                <MenuItem Header="Student Minutes and Sessions (Current IEP Year)" Click="ShowStudentStatistics_Click"/>
+                <MenuItem Header="Daily View (Current IEP Year)" Click="ShowDailyView_Click"/>
                 <MenuItem Header="Review and Reevaluation Dates" Click="ShowReviewDates_Click"/>
             </MenuItem>
 
             <MenuItem Header="_Help">
                 <MenuItem Header="Documentation" Click="Documentation_Click"/>
+                <MenuItem Header="Report Issue" Click="ReportIssue_Click"/>
                 <Separator/>
                 <MenuItem Header="About" Click="About_Click"/>
             </MenuItem>
@@ -50,6 +51,11 @@
 
         <!-- Calendar -->
         <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0" Width="600">
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,12">
+                <TextBlock Text="IEP Month:" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold"/>
+                <ComboBox x:Name="IepMonthComboBox" Width="320" SelectionChanged="IepMonthComboBox_SelectionChanged"/>
+            </StackPanel>
 
             <!-- Day Headers -->
             <UniformGrid Columns="7" Height="30" Margin="0,0,0,5">
